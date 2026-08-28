@@ -19,6 +19,11 @@ a reference level between 10:30 and 12:00 on volume that dries up, and resumes.
 | `docs/05-open-questions.md` | **The question list.** Start here if you only read one file |
 | `docs/06-odds-enhancer-scorecard.md` | The new Playbook archetype scorecard for this setup |
 
+## Shareable summary
+
+The whole plan as one readable page: `docs/midday-reset.html`
+(published at https://claude.ai/code/artifact/d31c3fea-92ff-495c-a235-2435a2dc735c)
+
 ## Code
 
 - `src/midday_reset/features.py` — reference implementation of leg detection,
