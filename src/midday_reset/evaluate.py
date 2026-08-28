@@ -216,3 +216,76 @@ def apply_costs(entry, exit_px, stop, shares, spread, mean_1min_vol, atr15,
     fill_out = exit_px - 0.5 * spread - impact
     comm = 2 * commission_per_share
     return (fill_out - fill_in - comm) / R
+
+
+# ----------------------------------------------------------------------------
+# clustering -- required once entries are VWAP touches
+# ----------------------------------------------------------------------------
+
+def cluster_bootstrap_paths(df: pd.DataFrame, ret_col: str,
+                            cluster_col: str = "day_symbol",
+                            n_paths: int = 10_000, rng=RNG) -> dict:
+    """Bootstrap by resampling CLUSTERS, not individual trades.
+
+    A trending name touches VWAP three or four times in one session. Those
+    signals share a symbol, a day, a catalyst and overlapping forward paths --
+    they are one observation wearing four hats. Resampling them individually
+    inflates the effective sample size and shrinks every confidence interval by
+    roughly sqrt(signals per day), which is how a study convinces itself of an
+    edge that is not there.
+
+    Resample whole day-symbol clusters instead. The width of the interval this
+    produces is the honest one.
+    """
+    sub = df[[cluster_col, ret_col]].dropna()
+    if sub.empty:
+        return {}
+    groups = [g[ret_col].to_numpy(float) for _, g in sub.groupby(cluster_col)]
+    n_clusters = len(groups)
+    means = np.empty(n_paths)
+    for i in range(n_paths):
+        pick = rng.integers(0, n_clusters, n_clusters)
+        means[i] = np.concatenate([groups[j] for j in pick]).mean()
+    obs = sub[ret_col].mean()
+    naive = sub[ret_col].std(ddof=1) / np.sqrt(len(sub))
+    return {
+        "mean_R": float(obs),
+        "n_signals": int(len(sub)),
+        "n_clusters": int(n_clusters),
+        "signals_per_cluster": float(len(sub) / n_clusters),
+        "ci95_clustered": (float(np.quantile(means, .025)),
+                           float(np.quantile(means, .975))),
+        "se_clustered": float(means.std(ddof=1)),
+        "se_naive_if_treated_as_independent": float(naive),
+        "se_understatement_factor": float(means.std(ddof=1) / naive) if naive else np.nan,
+    }
+
+
+def compare_exits(df: pd.DataFrame, exit_cols: list[str],
+                  cluster_col: str = "day_symbol") -> pd.DataFrame:
+    """Score every candidate exit rule on the SAME entries.
+
+    The point of logging the full forward path instead of one exit: the entry
+    and the exit cannot be chosen separately. A trend entry with a modest mean
+    and a fat right tail needs an exit that does not cut the tail, so the pair
+    is what gets evaluated.
+    """
+    rows = []
+    for c in exit_cols:
+        s = df[c].dropna()
+        if s.empty:
+            continue
+        boot = cluster_bootstrap_paths(df, c, cluster_col, n_paths=2000)
+        rows.append({
+            "exit_rule": c,
+            "n": int(s.size),
+            "mean_R": float(s.mean()),
+            "median_R": float(s.median()),
+            "win_rate": float((s > 0).mean()),
+            "p90_R": float(s.quantile(.90)),
+            "pct_of_mfe_captured": (float(s.mean() / df["mfe_eod"].mean())
+                                    if "mfe_eod" in df and df["mfe_eod"].mean() else np.nan),
+            "ci95_low": boot.get("ci95_clustered", (np.nan, np.nan))[0],
+            "ci95_high": boot.get("ci95_clustered", (np.nan, np.nan))[1],
+        })
+    return pd.DataFrame(rows).sort_values("mean_R", ascending=False)

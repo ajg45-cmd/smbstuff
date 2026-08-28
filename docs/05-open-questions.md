@@ -8,6 +8,11 @@ Answer §0 in a sitting with your trading partner and write the answers into
 
 ---
 
+> **§0 was answered on 2026-08-28.** The decisions are recorded in
+> [`07-decisions-and-exit-lab.md`](07-decisions-and-exit-lab.md), which also
+> resets the primary question to the exit study. The questions below are kept
+> as written so the reasoning behind each answer stays visible.
+
 ## §0 — Answer these ten first (everything downstream depends on them)
 
 1. **"$5 million traded" — shares or dollars?** And measured *when*? As written

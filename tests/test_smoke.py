@@ -68,8 +68,11 @@ else:
         print(f"  {k:24s} {round(v,4) if isinstance(v,float) else v}")
     lab = F.forward_labels(b1, c.trigger_time, c.entry, c.stop)
     print("labels:", {k:(round(v,2) if isinstance(v,float) else v) for k,v in lab.items()})
-    print("exit EMA9(15m):", round(F.exit_ema9(b15, c.trigger_time, c.entry, c.stop),3))
-    print("exit 2R       :", round(F.exit_fixed_target(b1, c.trigger_time, c.entry, c.stop, 2.0),3))
+    from midday_reset.exits import run_exit
+    print("exit EMA9(15m):", round(run_exit(b15, c.trigger_time, c.entry, c.stop,
+                                            "long", ema_span=9).R, 3))
+    print("exit 2R       :", round(run_exit(b15, c.trigger_time, c.entry, c.stop,
+                                            "long", target_R=2.0).R, 3))
 
     # --- contract assertions --------------------------------------------------
     assert c is not None, "expected a candidate on the synthetic session"

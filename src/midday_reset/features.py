@@ -417,33 +417,40 @@ def find_candidate(symbol: str, bars_1m: pd.DataFrame, bars_15m: pd.DataFrame,
 # ----------------------------------------------------------------------------
 
 def forward_labels(bars_1m: pd.DataFrame, entry_time, entry: float,
-                   stop: float, next_session_1m: Optional[pd.DataFrame] = None,
+                   stop: float, side: str = "long",
+                   next_session_1m: Optional[pd.DataFrame] = None,
                    horizons=(15, 30, 60, 120)) -> dict:
-    """MFE/MAE in R at each horizon. NEVER join this to features before modeling."""
-    R = entry - stop
+    """MFE/MAE in R at each horizon, for either side.
+
+    NEVER join this to features before modeling -- keep the two tables apart so
+    a future column cannot wander into a feature matrix by accident.
+    """
+    sgn = 1.0 if side == "long" else -1.0
+    R = sgn * (entry - stop)
     if R <= 0:
         return {}
-    fwd = bars_1m[bars_1m.index > entry_time]
-    fwd = fwd[fwd.index.time < RTH_CLOSE]
+    fwd = bars_1m[(bars_1m.index > entry_time) & (bars_1m.index.time < RTH_CLOSE)]
     out: dict = {}
 
-    for h in horizons:
-        seg = fwd[fwd.index <= entry_time + pd.Timedelta(minutes=h)]
+    def excursions(seg):
         if seg.empty:
-            out[f"mfe_{h}"] = out[f"mae_{h}"] = np.nan
-            continue
-        out[f"mfe_{h}"] = (float(seg["high"].max()) - entry) / R
-        out[f"mae_{h}"] = (float(seg["low"].min()) - entry) / R
+            return np.nan, np.nan
+        best = seg["high"].max() if sgn > 0 else seg["low"].min()
+        worst = seg["low"].min() if sgn > 0 else seg["high"].max()
+        return sgn * (float(best) - entry) / R, sgn * (float(worst) - entry) / R
+
+    for h in horizons:
+        f, a = excursions(fwd[fwd.index <= entry_time + pd.Timedelta(minutes=h)])
+        out[f"mfe_{h}"], out[f"mae_{h}"] = f, a
 
     if not fwd.empty:
-        out["mfe_eod"] = (float(fwd["high"].max()) - entry) / R
-        out["mae_eod"] = (float(fwd["low"].min()) - entry) / R
-        out["ret_eod_R"] = (float(fwd["close"].iloc[-1]) - entry) / R
-        out["time_to_mfe"] = int(
-            (fwd["high"].idxmax() - entry_time).total_seconds() // 60)
-        # did 1R arrive before the stop did?
-        up = fwd.index[fwd["high"] >= entry + R]
-        dn = fwd.index[fwd["low"] <= stop]
+        out["mfe_eod"], out["mae_eod"] = excursions(fwd)
+        out["ret_eod_R"] = sgn * (float(fwd["close"].iloc[-1]) - entry) / R
+        best_idx = fwd["high"].idxmax() if sgn > 0 else fwd["low"].idxmin()
+        out["time_to_mfe"] = int((best_idx - entry_time).total_seconds() // 60)
+        fav = entry + sgn * R
+        up = fwd.index[(fwd["high"] >= fav) if sgn > 0 else (fwd["low"] <= fav)]
+        dn = fwd.index[(fwd["low"] <= stop) if sgn > 0 else (fwd["high"] >= stop)]
         first_up = up[0] if len(up) else None
         first_dn = dn[0] if len(dn) else None
         out["hit_1R_before_stop"] = bool(
@@ -453,51 +460,11 @@ def forward_labels(bars_1m: pd.DataFrame, entry_time, entry: float,
     if next_session_1m is not None and not next_session_1m.empty:
         nr = rth(next_session_1m)
         if not nr.empty:
-            out["ret_nextopen_R"] = (float(nr["open"].iloc[0]) - entry) / R
-            out["ret_nextclose_R"] = (float(nr["close"].iloc[-1]) - entry) / R
+            out["ret_nextopen_R"] = sgn * (float(nr["open"].iloc[0]) - entry) / R
+            out["ret_nextclose_R"] = sgn * (float(nr["close"].iloc[-1]) - entry) / R
     return out
-
-
-# ----------------------------------------------------------------------------
-# exit rules -- score your existing hot key against the alternatives
-# ----------------------------------------------------------------------------
-
-def exit_ema9(bars: pd.DataFrame, entry_time, entry: float, stop: float,
-              period: int = 9, atr_buffer: float = 0.0,
-              atr_val: float = 0.0) -> float:
-    """Realized R under 'exit when a bar CLOSES below EMA(period) - buffer'.
-
-    `bars` should be the 5-min or 15-min frame -- this is exactly what the
-    Gr8Script EMA9 hot key does today. Pass atr_buffer > 0 to score the v2
-    ATR-cushioned variant instead of guessing at it.
-    """
-    R = entry - stop
-    if R <= 0:
-        return np.nan
-    fwd = bars[bars.index > entry_time]
-    fwd = fwd[fwd.index.time < RTH_CLOSE]
-    if fwd.empty:
-        return np.nan
-    ema = fwd["close"].ewm(span=period, adjust=False).mean()
-    for ts, row in fwd.iterrows():
-        if row["low"] <= stop:                       # hard stop wins ties
-            return -1.0
-        if row["close"] < ema.loc[ts] - atr_buffer * atr_val:
-            return (float(row["close"]) - entry) / R
-    return (float(fwd["close"].iloc[-1]) - entry) / R
-
-
-def exit_fixed_target(bars_1m: pd.DataFrame, entry_time, entry: float,
-                      stop: float, target_R: float) -> float:
-    R = entry - stop
-    fwd = bars_1m[(bars_1m.index > entry_time) & (bars_1m.index.time < RTH_CLOSE)]
-    for _, row in fwd.iterrows():
-        if row["low"] <= stop:
-            return -1.0
-        if row["high"] >= entry + target_R * R:
-            return target_R
-    return (float(fwd["close"].iloc[-1]) - entry) / R if not fwd.empty else np.nan
 
 
 def to_frame(cands: list[Candidate]) -> pd.DataFrame:
     return pd.DataFrame([asdict(c) for c in cands])
+
