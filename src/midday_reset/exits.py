@@ -240,7 +240,21 @@ def universe_slices(df: pd.DataFrame) -> dict[str, pd.Series]:
     it has been shown where to look next. Require the winner to hold in most of
     these, then re-check it out of sample.
     """
-    q = lambda c, p: df[c].quantile(p) if c in df else np.nan
+    def split(col, name_lo, name_hi, out):
+        """Tercile split, skipped when the terciles are degenerate.
+
+        If a column is constant (or nearly so) both masks come back True for
+        every row and the report shows two identical slices that look like
+        agreement. That is worse than no slice at all.
+        """
+        if col not in df:
+            return
+        lo, hi = df[col].quantile(1 / 3), df[col].quantile(2 / 3)
+        if pd.isna(lo) or pd.isna(hi) or lo >= hi:
+            return
+        out[name_lo] = df[col] <= lo
+        out[name_hi] = df[col] >= hi
+
     s: dict[str, pd.Series] = {"all": pd.Series(True, index=df.index)}
     if "side" in df:
         s["long"] = df["side"] == "long"
@@ -257,16 +271,12 @@ def universe_slices(df: pd.DataFrame) -> dict[str, pd.Series]:
         s["abnormal_open"] = df["open_is_abnormal"]
     if "beyond_pmh" in df:
         s["beyond_pmh"] = df["beyond_pmh"]
-    if "npvr" in df:
-        s["dry_approach"] = df["npvr"] <= q("npvr", 1 / 3)
-        s["wet_approach"] = df["npvr"] >= q("npvr", 2 / 3)
-    if "vwap_slope_atr" in df:
-        s["strong_trend"] = df["vwap_slope_atr"] >= q("vwap_slope_atr", 2 / 3)
-        s["weak_trend"] = df["vwap_slope_atr"] <= q("vwap_slope_atr", 1 / 3)
-    if "R_pct" in df:
-        s["tight_risk"] = df["R_pct"] <= q("R_pct", 1 / 3)
-        s["wide_risk"] = df["R_pct"] >= q("R_pct", 2 / 3)
-    return s
+    split("npvr", "dry_approach", "wet_approach", s)
+    split("vwap_slope_atr", "weak_trend", "strong_trend", s)
+    split("R_pct", "tight_risk", "wide_risk", s)
+    # a slice that is everybody, or nobody, tells you nothing
+    return {k: m for k, m in s.items()
+            if k == "all" or 0 < int(m.sum()) < len(df)}
 
 
 def universe_report(df: pd.DataFrame, rule_col: str,

@@ -1,8 +1,17 @@
 __pycache__/
 *.pyc
 .venv/
-data/
-results/
-*.parquet
-*.png
 .DS_Store
+
+# Bulk market data stays out of git -- but a small committed sample is how you
+# hand me something to run against.
+data/*
+!data/samples/
+data/samples/*
+!data/samples/*.csv
+!data/samples/README.md
+
+results/*
+!results/.gitkeep
+!results/trials_log.csv
+*.parquet
