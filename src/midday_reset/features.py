@@ -71,12 +71,21 @@ def atr(daily: pd.DataFrame, n: int = 14) -> pd.Series:
     return tr.ewm(alpha=1 / n, adjust=False).mean().shift(1)
 
 
-def session_vwap(bars_1m: pd.DataFrame) -> pd.Series:
-    """Session VWAP from 9:30, on typical price. Returns a series aligned to RTH."""
-    r = rth(bars_1m)
-    tp = (r["high"] + r["low"] + r["close"]) / 3.0
-    pv = (tp * r["volume"]).cumsum()
-    vv = r["volume"].cumsum().replace(0, np.nan)
+def session_vwap(bars_1m: pd.DataFrame, anchor: str = "rth") -> pd.Series:
+    """Volume-weighted average price on typical price.
+
+    `anchor="rth"`  -- resets at 09:30. "Session VWAP" on most platforms.
+    `anchor="day"`  -- anchored at the first bar available, so premarket volume
+                       is included. "Day VWAP" on platforms that show it.
+
+    These are different lines, often by tens of cents on a gapper, and which
+    one you were looking at decides whether a bar touched it. The anchor is a
+    tested parameter, not a detail.
+    """
+    src = rth(bars_1m) if anchor == "rth" else bars_1m
+    tp = (src["high"] + src["low"] + src["close"]) / 3.0
+    pv = (tp * src["volume"]).cumsum()
+    vv = src["volume"].cumsum().replace(0, np.nan)
     return (pv / vv).rename("vwap")
 
 

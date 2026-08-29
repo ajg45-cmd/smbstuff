@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from synth import build, flat_baseline, F
 from midday_reset import v1
+from test_vwap_rejection import make_ctx  # noqa: F401  (shared ctx builder)
 from midday_reset.exits import rule_grid, score_trade, leaderboard, universe_report
 
 ATR_D = 3.0
@@ -35,11 +36,11 @@ def frames(b1):
     return {f: F.rth(b1).resample(f.replace("m", "min")).agg(
                 {"open": "first", "high": "max", "low": "min",
                  "close": "last", "volume": "sum"}).dropna()
-            for f in ("5m", "15m")}
+            for f in ("2m", "5m", "10m", "15m")}
 
 
 if __name__ == "__main__":
-    rules = rule_grid(("5m", "15m"))
+    rules = rule_grid(("5m", "10m", "15m"))
     rows = []
     for i, after in enumerate([6.0, 4.0, 2.0, 0.0, -2.5, -5.0]):
         day = f"2024-03-{5 + i:02d}"
@@ -48,9 +49,14 @@ if __name__ == "__main__":
         base = flat_baseline(b1)
         vw = F.session_vwap(b1)
 
-        for f, bars in fr.items():
-            sigs = v1.find_signals(f"SYN{i}", b1, bars, ATR_D, base,
-                                   side="long", frame=f)
+        cont = {k: v for k, v in fr.items()}
+        ctx = v1.SessionCtx(symbol=f"SYN{i}", date=b1.index[0].date(),
+                            bars_1m=b1, frames=fr, cont=cont, atr_d=ATR_D,
+                            baseline=base, event={"guidance": "raise"})
+        for f in fr:
+            sigs = v1.find_signals(ctx, side="long", frame=f,
+                                   require_trend=False, require_pm_break=False,
+                                   require_ema_gate=False)
             for s in sigs:
                 entry_time = s.bar_time + pd.Timedelta(minutes=int(f.rstrip("m")))
                 row = dict(vars(s))

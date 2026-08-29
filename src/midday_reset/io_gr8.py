@@ -94,6 +94,8 @@ def load_dir(directory: str) -> dict[tuple[str, object], pd.DataFrame]:
     out: dict[tuple[str, object], pd.DataFrame] = {}
     for p in sorted(glob.glob(os.path.join(directory, "*.csv"))):
         stem = os.path.basename(p).rsplit(".", 1)[0]
+        if stem.lstrip("_").lower() in ("events", "guidance", "meta"):
+            continue                      # sidecar attribute files, not bars
         sym = stem.split("_")[0]
         try:
             df = load_session_csv(p)

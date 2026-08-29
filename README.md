@@ -20,7 +20,8 @@ the exit question is better-posed than the entry question.
 | `docs/04-eye-test.md` | The blind chart-grading tool that turns "clean price action" into a number |
 | `docs/05-open-questions.md` | The question list (§0 now answered) |
 | `docs/06-odds-enhancer-scorecard.md` | The new Playbook archetype scorecard for this setup |
-| `docs/07-decisions-and-exit-lab.md` | **Current.** Decisions record, the exit rule set, and the universe slices |
+| `docs/07-decisions-and-exit-lab.md` | Decisions record, the exit rule set, and the universe slices |
+| `docs/08-momentum-gates.md` | **Current.** Momentum gates, VWAP anchors, and the filter ladder |
 
 ## Shareable summary
 
@@ -33,6 +34,9 @@ The whole plan as one readable page: `docs/midday-reset.html`
   clock-normalized volume baseline, ATR zigzag legs, side-aware forward labeling.
 - `src/midday_reset/v1.py` — the traded signal: VWAP continuation, long and
   short, on 5-min or 15-min bars, with every decision from `docs/07` applied.
+- `src/midday_reset/ablation.py` — **the filter ladder.** Does clean price
+  action move EV, or just shrink n? Reports the same-size random control and
+  the lift after stripping out trend strength.
 - `src/midday_reset/exits.py` — **the exit lab.** One engine, ~50 rules across
   both frames, a paired leaderboard against a do-nothing benchmark, and the
   universe slicing.

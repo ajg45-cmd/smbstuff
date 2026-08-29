@@ -53,14 +53,25 @@ if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "data/fake_export"
     os.makedirs(out, exist_ok=True)
     rng = np.random.default_rng(7)
-    n = 0
+    n, ev_rows = 0, []
     for sym, diverge in (("AAA", False), ("BBB", True)):
-        for i in range(12):
+        for i in range(16):
             day = f"2024-03-{4 + i:02d}"
-            after = float(rng.choice([7, 5, 3, 1, 0, -2, -4]))
-            b1, _ = build(path_fn(after, gap=float(rng.uniform(-2, 4))),
-                          day=day, seed=100 + i, noise=0.03)
+            # guidance is made GENUINELY predictive here, so the ladder can be
+            # checked for detecting a real effect -- while the other gates stay
+            # uninformative, so it can be checked for NOT crediting those.
+            raised = bool(rng.random() < 0.5)
+            after = float(rng.choice([7, 5, 4] if raised else [1, 0, -3]))
+            gap = float(rng.uniform(-2, 4))
+            b1, _ = build(path_fn(after, gap=gap), day=day,
+                          seed=100 + i, noise=0.03)
             write(out, sym, day, b1, diverge)
+            ev_rows.append({"symbol": sym, "date": day,
+                            "guidance": "raise" if raised else "maintain",
+                            "surprise_pct": round(float(rng.uniform(0, 20)), 1),
+                            "notes": ""})
             n += 1
-    print(f"wrote {n} session files to {out}/  "
-          f"(BBB's platform VWAP deliberately includes premarket)")
+    pd.DataFrame(ev_rows).to_csv(os.path.join(out, "events.csv"), index=False)
+    print(f"wrote {n} session files + events.csv to {out}/\n"
+          f"  BBB's platform VWAP deliberately includes premarket\n"
+          f"  guidance=raise is deliberately predictive; the other gates are not")

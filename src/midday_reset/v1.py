@@ -1,28 +1,42 @@
-"""V1 entry: the 15-min (or 5-min) VWAP continuation, long and short.
+"""V1 entry: momentum VWAP continuation, long and short, with clean-price-action gates.
 
-Decisions recorded from the trader, 2026-08-28 -- these are answers, not
-defaults, and changing one is a deliberate act:
+Decisions from the trader, 2026-08-28 → 08-29:
 
-  Liquidity      5,000,000 shares CUMULATIVE at time of entry (not day total).
-                 Dollar volume logged alongside so the filter can be swapped.
-  Strong open    Defined relative to the name's own norm: first-hour movement
-                 larger than usual, measured in ATR, not an absolute percent.
-  Premarket high An ENHANCER, not a gate. Logged, never filtered on.
-  VWAP touch     Wick through and hold, OR come within 0.10 x daily ATR. It does
-                 not have to print the line exactly.
-  Window         10:30-12:00 hard for now; widen once there is a result.
-  Which signal   The second leg of the FIRST directional program -- so the first
-                 qualifying rejection of the day. Later ones are logged and kept
-                 in their own bucket, never pooled with the first.
-  Direction      Long AND short. Mirrored logic, separate populations, never
-                 pooled in a result.
-  Concurrency    Multiple positions allowed; still clustered by day for stats.
-  Bar frames     5-min and 15-min both, as a crossed axis with the exit frame.
+  Liquidity        5,000,000 shares CUMULATIVE at time of entry.
+  Strong open      Movement larger than normal for the name, measured in ATR.
+  Gap direction    BOTH. Gap ups and gap downs are eligible; the sign is logged
+                   and sliced, never filtered.
+  Premarket range  Entry must be OUT of the premarket range -- above PM high for
+                   longs, below PM low for shorts. This is now a GATE. (It was
+                   recorded as an enhancer on 08-28; the later instruction
+                   supersedes it. `beyond_pm_range` is still logged so the
+                   gate-vs-enhancer question stays measurable by re-running with
+                   `require_pm_break=False`.)
+  VWAP            Session (09:30 anchored) vs Day (premarket included) is a
+                   TESTED PARAMETER, not a detail. Both are run.
+  EMA gate        The entry bar must close beyond ALL of EMA 5 / 9 / 21 on the
+                   entry frame, and every EMA must be upsloping, with that
+                   upslope established by the first 30 minutes.
+  Cleanliness      Persistence of price beyond the 21 EMA on a fast frame -- the
+                   "closes above the 21 EMA 90% of the time" idea, measured
+                   rather than eyeballed.
+  Frames           5-min, 10-min and 15-min, crossed with the exit frame.
+  Guidance         Whether the day-1 report RAISED guidance is carried as an
+                   event attribute and sliced. It is not derivable from bars.
+
+CONTINUOUS EMAs -- a correctness point, not a preference
+--------------------------------------------------------
+A 21-period EMA on 15-minute bars needs 21 bars, which is over five hours. At
+10:00 a session-only EMA21 has seen two bars and is meaningless. Charting
+platforms compute EMAs on a CONTINUOUS multi-session series, so that is what
+the study does: EMAs come from prior sessions plus today, then get reindexed
+onto today. Computing them per-session would make every early-session EMA gate
+a different (and much weaker) test than the one you are running on your screen.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import time
 from typing import Optional
 
@@ -31,15 +45,22 @@ import pandas as pd
 
 from .features import (RTH_OPEN, RTH_CLOSE, OR_END, WINDOW_START, WINDOW_END,
                        TICK, rth, premarket, session_vwap, _mean_vol_per_min,
-                       _baseline_vol_per_min, swing_points, ZIGZAG_ATR_MULT)
+                       _baseline_vol_per_min)
 
 # --- tunables [T] ------------------------------------------------------------
 TOUCH_TOL_ATR = 0.10          # of DAILY atr -- "gets within 0.1 ATR" counts
-MIN_CLOSE_POS = 0.50          # closes in the direction of the trend
-STOP_BUFFER_ATR = 0.10        # of the bar-frame atr, beyond the signal bar
-MIN_CUM_SHARES = 5_000_000    # cumulative at entry
-OPEN_MOVE_MIN_ATR = 0.75      # first-hour range vs the name's own ATR
+MIN_CLOSE_POS = 0.50
+STOP_BUFFER_ATR = 0.10
+MIN_CUM_SHARES = 5_000_000
+OPEN_MOVE_MIN_ATR = 0.75
 MAX_APPROACH_BARS = 8
+
+EMA_PERIODS = (5, 9, 21)      # the entry-gate ribbon
+CLEAN_EMA = 21                # the persistence yardstick
+CLEAN_FRAMES = ("2m", "5m")   # fast frames the persistence is measured on
+CLEAN_MIN_PCT = 0.90          # "closes beyond it 90% of the time" [T]
+UPSLOPE_BY = time(10, 0)      # "proven by the first 30 minutes"
+ENTRY_FRAMES = ("5m", "10m", "15m")
 
 
 def bar_atr(bars: pd.DataFrame, n: int = 14) -> pd.Series:
@@ -50,40 +71,108 @@ def bar_atr(bars: pd.DataFrame, n: int = 14) -> pd.Series:
     return tr.ewm(alpha=1 / n, adjust=False).mean()
 
 
-def open_move(bars_1m: pd.DataFrame, atr_d: float) -> dict:
-    """'Strong open' = moving more than this name normally moves.
+def emas(bars_cont: pd.DataFrame, periods=EMA_PERIODS) -> pd.DataFrame:
+    """EMAs on the CONTINUOUS series -- see the module docstring."""
+    return pd.DataFrame({p: bars_cont["close"].ewm(span=p, adjust=False).mean()
+                         for p in periods})
 
-    Relative to its own ATR, not an absolute percent -- a 2% first hour is
-    unremarkable in one name and extraordinary in another.
-    """
+
+@dataclass
+class SessionCtx:
+    """Everything one session needs, built once and reused across sides/frames."""
+    symbol: str
+    date: object
+    bars_1m: pd.DataFrame
+    frames: dict                      # "2m"/"5m"/"10m"/"15m" -> today's bars
+    cont: dict                        # same keys -> prior sessions + today
+    atr_d: float
+    baseline: pd.Series
+    prev_close: Optional[float] = None
+    event: dict = field(default_factory=dict)   # guidance, surprise, ...
+
+    def vwap(self, anchor: str) -> pd.Series:
+        return session_vwap(self.bars_1m, anchor=anchor)
+
+
+def open_move(bars_1m: pd.DataFrame, atr_d: float) -> dict:
+    """'Strong open' = moving more than this name normally moves, in ATR."""
     seg = rth(bars_1m)
     seg = seg[seg.index.time < time(10, 30)]
     if seg.empty or not atr_d:
         return {}
     op = float(seg["open"].iloc[0])
     hi, lo = float(seg["high"].max()), float(seg["low"].min())
-    return {
-        "open_range_atr": (hi - lo) / atr_d,
-        "open_up_atr": (hi - op) / atr_d,
-        "open_down_atr": (op - lo) / atr_d,
-        "open_close_atr": (float(seg["close"].iloc[-1]) - op) / atr_d,
-        "open_is_abnormal": bool((hi - lo) / atr_d >= OPEN_MOVE_MIN_ATR),
-    }
+    return {"open_range_atr": (hi - lo) / atr_d,
+            "open_is_abnormal": bool((hi - lo) / atr_d >= OPEN_MOVE_MIN_ATR)}
+
+
+def clean_persistence(ctx: SessionCtx, as_of, sgn: float) -> dict:
+    """Fraction of fast-frame bars that CLOSED beyond the 21 EMA, since 09:30.
+
+    This is the mechanical version of "it closes above the 21 EMA 90% of the
+    time" -- a persistence measure rather than a snapshot. A name that has spent
+    the whole morning on one side of its 21 EMA is trending cleanly; one that
+    keeps crossing it is chopping, whatever it happens to be doing right now.
+    """
+    out = {}
+    for f in CLEAN_FRAMES:
+        bars, cont = ctx.frames.get(f), ctx.cont.get(f)
+        if bars is None or cont is None or bars.empty:
+            out[f"pct_beyond_ema{CLEAN_EMA}_{f}"] = np.nan
+            continue
+        e = cont["close"].ewm(span=CLEAN_EMA, adjust=False).mean().reindex(bars.index)
+        seg = bars[(bars.index.time >= RTH_OPEN) & (bars.index < as_of)]
+        if seg.empty:
+            out[f"pct_beyond_ema{CLEAN_EMA}_{f}"] = np.nan
+            continue
+        beyond = sgn * (seg["close"] - e.reindex(seg.index)) > 0
+        out[f"pct_beyond_ema{CLEAN_EMA}_{f}"] = float(beyond.mean())
+    return out
+
+
+def ema_state(ctx: SessionCtx, frame: str, as_of, sgn: float) -> dict:
+    """The entry-frame EMA gates: beyond all, all sloping, slope proven early."""
+    bars, cont = ctx.frames.get(frame), ctx.cont.get(frame)
+    if bars is None or cont is None or bars.empty:
+        return {}
+    e = emas(cont).reindex(bars.index)
+    upto = bars[bars.index < as_of]
+    if upto.empty or e.loc[upto.index].isna().all().all():
+        return {}
+    ts = upto.index[-1]
+    close = float(upto["close"].iloc[-1])
+    row = e.loc[ts]
+
+    beyond_all = bool(all(sgn * (close - float(row[p])) > 0 for p in EMA_PERIODS))
+    slopes = e.diff().loc[ts]
+    upsloping = bool(all(sgn * float(slopes[p]) > 0 for p in EMA_PERIODS
+                         if not pd.isna(slopes[p])))
+    # ribbon in order: 5 above 9 above 21 for a long
+    ribbon = bool(all(sgn * (float(row[EMA_PERIODS[i]])
+                             - float(row[EMA_PERIODS[i + 1]])) > 0
+                      for i in range(len(EMA_PERIODS) - 1)))
+
+    early = upto[upto.index.time <= UPSLOPE_BY]
+    if len(early):
+        es = e.diff().loc[early.index[-1]]
+        upslope_early = bool(all(sgn * float(es[p]) > 0 for p in EMA_PERIODS
+                                 if not pd.isna(es[p])))
+    else:
+        upslope_early = False
+
+    return {"beyond_all_emas": beyond_all, "emas_upsloping": upsloping,
+            "ema_ribbon_aligned": ribbon, "upslope_by_1000": upslope_early,
+            "dist_ema21_atr": (close - float(row[21])) / ctx.atr_d
+                              if ctx.atr_d else np.nan}
 
 
 def _approach_run(bars: pd.DataFrame, sig_idx, sgn: float,
                   max_bars: int = MAX_APPROACH_BARS) -> pd.DataFrame:
-    """The run of bars moving against the trend immediately before the signal.
-
-    Replaces the zigzag pullback as the interval over which volume dry-up is
-    measured: no reversal threshold to tune before the study can start.
-    """
     pos = bars.index.get_loc(sig_idx)
     col = "high" if sgn > 0 else "low"
     start = pos
     while start - 1 >= 0 and pos - start < max_bars:
-        prev, cur = bars[col].iloc[start - 1], bars[col].iloc[start]
-        if sgn * (prev - cur) < 0:
+        if sgn * (bars[col].iloc[start - 1] - bars[col].iloc[start]) < 0:
             break
         start -= 1
     return bars.iloc[start:pos]
@@ -92,171 +181,184 @@ def _approach_run(bars: pd.DataFrame, sig_idx, sgn: float,
 @dataclass
 class Signal:
     signal_id: str; symbol: str; date: object; side: str; frame: str
+    vwap_anchor: str
     bar_time: object; signal_index_today: int; is_first_of_day: bool
-    # the bar
     bar_open: float; bar_high: float; bar_low: float; bar_close: float
     close_position: float; touch_depth_atr: float; vwap_at_close: float
     wicked_through: bool
-    # trend context
+    # trend + momentum gates
     pct_session_with_trend: float; vwap_slope_atr: float
-    above_ema9: bool; new_extreme_last_90m: bool; trend_ok: bool
-    # enhancers (logged, never gates)
-    beyond_pmh: bool; beyond_orh: bool
+    beyond_all_emas: bool; emas_upsloping: bool; ema_ribbon_aligned: bool
+    upslope_by_1000: bool; dist_ema21_atr: float
+    pct_beyond_ema21_2m: float; pct_beyond_ema21_5m: float; clean_90: bool
+    # premarket range
+    beyond_pm_range: bool; pm_break_atr: float
+    # catalyst / context, logged and sliced, never filtered
+    gap_pct: float; gap_direction: str; guidance: str
     open_range_atr: float; open_is_abnormal: bool
-    leg_index: int
-    # liquidity, point-in-time
+    # liquidity
     cum_shares_at_entry: float; cum_dollars_at_entry: float; liquid: bool
-    # volume signature (kept simple: the RVOL normalization is a later upgrade)
-    approach_bars: int; pvr_raw: float; pvr_expected: float; npvr: float
-    reject_vol_ratio: float
+    # volume signature
+    approach_bars: int; pvr_raw: float; npvr: float; reject_vol_ratio: float
     # entries and risk
     entry_close: float; stop: float; R: float; R_pct: float; R_atr: float
-    entry_break: float; break_time: object; R_break: float
+    entry_break: float; break_time: object
 
 
-def find_signals(symbol: str, bars_1m: pd.DataFrame, bars: pd.DataFrame,
-                 atr_d: float, baseline: pd.Series, side: str = "long",
-                 frame: str = "15m", window=(WINDOW_START, WINDOW_END),
+def find_signals(ctx: SessionCtx, side: str = "long", frame: str = "15m",
+                 vwap_anchor: str = "rth", window=(WINDOW_START, WINDOW_END),
                  touch_tol_atr: float = TOUCH_TOL_ATR,
                  min_close_pos: float = MIN_CLOSE_POS,
-                 require_trend: bool = True) -> list[Signal]:
-    """Every VWAP continuation signal in the window, for one side, one frame.
+                 require_trend: bool = True,
+                 require_pm_break: bool = True,
+                 require_ema_gate: bool = True) -> list[Signal]:
+    """Every qualifying signal in the window, for one side / frame / VWAP anchor.
 
-    Returns ALL of them, flagged by `signal_index_today`. The traded population
-    is `is_first_of_day` -- the second leg of the first directional program --
-    but the rest are kept so that choice can be checked rather than assumed.
+    Returns all of them, flagged by `signal_index_today`; the traded population
+    is `is_first_of_day`. Gates are switchable so the filter ladder can measure
+    what each one is worth instead of assuming it.
 
-    The touch is tested minute by minute against the CONCURRENT VWAP. Testing a
-    low made at 11:03 against the line as it stood at 11:15 is the single
-    easiest way to manufacture signals that never existed.
+    The VWAP touch is tested minute by minute against the CONCURRENT VWAP.
     """
     out: list[Signal] = []
-    if bars.empty or bars_1m.empty or not atr_d or np.isnan(atr_d):
+    bars = ctx.frames.get(frame)
+    if bars is None or bars.empty or not ctx.atr_d or np.isnan(ctx.atr_d):
         return out
     sgn = 1.0 if side == "long" else -1.0
     step = int(frame.rstrip("m"))
-    day = bars.index[0].date()
 
-    vwap = session_vwap(bars_1m)
-    pm = premarket(bars_1m)
+    vwap = ctx.vwap(vwap_anchor)
+    pm = premarket(ctx.bars_1m)
     pmh = float(pm["high"].max()) if not pm.empty else np.nan
     pml = float(pm["low"].min()) if not pm.empty else np.nan
+    pm_edge = pmh if sgn > 0 else pml
     atr_b = bar_atr(bars)
-    swings = swing_points(bars, ZIGZAG_ATR_MULT * float(atr_b.median()))
-    om = open_move(bars_1m, atr_d)
-    tol = touch_tol_atr * atr_d
+    om = open_move(ctx.bars_1m, ctx.atr_d)
+    tol = touch_tol_atr * ctx.atr_d
 
-    sess = rth(bars_1m)
+    sess = rth(ctx.bars_1m)
     if sess.empty:
         return out
     sess_start = sess.index[0]
-    or_seg = sess[sess.index.time < OR_END]
-    orh = float(or_seg["high"].max()) if not or_seg.empty else np.nan
-    orl = float(or_seg["low"].min()) if not or_seg.empty else np.nan
+    gap = ((float(sess["open"].iloc[0]) - ctx.prev_close) / ctx.prev_close
+           if ctx.prev_close else np.nan)
 
     n_found = 0
     in_win = bars[(bars.index.time >= window[0]) & (bars.index.time < window[1])]
 
     for ts, bar in in_win.iterrows():
         end = ts + pd.Timedelta(minutes=step)
-        sub = bars_1m[(bars_1m.index >= ts) & (bars_1m.index < end)]
+        sub = ctx.bars_1m[(ctx.bars_1m.index >= ts) & (ctx.bars_1m.index < end)]
         if sub.empty:
             continue
         vsub = vwap.reindex(sub.index).ffill()
 
-        # against-trend extreme of each minute, relative to the concurrent vwap
         extreme = sub["low"] if sgn > 0 else sub["high"]
         penetration = float((sgn * (extreme - vsub)).min())
-        if penetration > tol:                       # never got near the line
+        if penetration > tol:
             continue
 
-        vwc = float(vwap.asof(min(end, vwap.index[-1])))
+        vwc_src = vwap[vwap.index < end]
+        if vwc_src.empty:
+            continue
+        vwc = float(vwc_src.iloc[-1])
         op, hi, lo, cl = (float(bar["open"]), float(bar["high"]),
                           float(bar["low"]), float(bar["close"]))
-        if sgn * (cl - vwc) <= 0:                   # must close back on side
+        if sgn * (cl - vwc) <= 0:
             continue
         rng = hi - lo
         cpos = ((cl - lo) if sgn > 0 else (hi - cl)) / rng if rng > 0 else np.nan
         if not (cpos >= min_close_pos):
             continue
 
-        # --- trend state, using only data up to this bar's close --------------
+        # --- out of the premarket range (gate) --------------------------------
+        beyond_pm = bool(sgn * (cl - pm_edge) > 0) if not pd.isna(pm_edge) else False
+        pm_break_atr = (sgn * (cl - pm_edge) / ctx.atr_d
+                        if not pd.isna(pm_edge) and ctx.atr_d else np.nan)
+        if require_pm_break and not beyond_pm:
+            continue
+
+        # --- momentum: beyond every EMA, all upsloping, proven early ----------
+        es = ema_state(ctx, frame, end, sgn)
+        if not es:
+            continue
+        if require_ema_gate and not (es["beyond_all_emas"]
+                                     and es["emas_upsloping"]
+                                     and es["upslope_by_1000"]):
+            continue
+
+        # --- trend state ------------------------------------------------------
         upto = sess[sess.index < end]
         v_up = vwap.reindex(upto.index)
         pct_with = float((sgn * (upto["close"] - v_up) > 0).mean())
         prior = end - pd.Timedelta(minutes=60)
-        vprior = float(vwap.asof(prior)) if prior >= sess_start else np.nan
-        slope = (sgn * (vwc - vprior) / atr_d) if not pd.isna(vprior) else np.nan
-        b_upto = bars[bars.index < end]
-        ema9 = b_upto["close"].ewm(span=9, adjust=False).mean()
-        above_ema = bool(len(b_upto) and
-                         sgn * (float(b_upto["close"].iloc[-1])
-                                - float(ema9.iloc[-1])) > 0)
-        late = upto[upto.index.time >= time(9, 45)]
-        ext_t = (late["high"].idxmax() if sgn > 0 else late["low"].idxmin()) \
-            if not late.empty else None
-        new_ext = bool(ext_t is not None and ext_t >= end - pd.Timedelta(minutes=90))
-        trend_ok = bool(pct_with >= 0.60 and (slope or 0) > 0 and above_ema)
-        if require_trend and not trend_ok:
+        vp = vwap[vwap.index <= prior]
+        slope = (sgn * (vwc - float(vp.iloc[-1])) / ctx.atr_d) if len(vp) else np.nan
+        if require_trend and not (pct_with >= 0.60 and (slope or 0) > 0):
             continue
 
-        # --- liquidity, point-in-time ----------------------------------------
-        cum = sess[sess.index < end]
-        cum_sh = float(cum["volume"].sum())
-        cum_usd = float((cum["close"] * cum["volume"]).sum())
+        cp = clean_persistence(ctx, end, sgn)
+        clean90 = bool(max([v for v in cp.values() if not pd.isna(v)] or [0])
+                       >= CLEAN_MIN_PCT)
 
-        # --- volume over the approach ----------------------------------------
+        cum = sess[sess.index < end]
+        cum_sh, cum_usd = (float(cum["volume"].sum()),
+                           float((cum["close"] * cum["volume"]).sum()))
+
         appr = _approach_run(bars, ts, sgn)
         a_start = appr.index[0] if len(appr) else ts - pd.Timedelta(minutes=step)
-        a_vpm = _mean_vol_per_min(bars_1m, a_start, ts)
-        b_vpm = _mean_vol_per_min(bars_1m, sess_start, a_start)
+        a_vpm = _mean_vol_per_min(ctx.bars_1m, a_start, ts)
+        b_vpm = _mean_vol_per_min(ctx.bars_1m, sess_start, a_start)
         pvr_raw = a_vpm / b_vpm if b_vpm > 0 else np.nan
-        e_a = _baseline_vol_per_min(baseline, a_start, ts)
-        e_b = _baseline_vol_per_min(baseline, sess_start, a_start)
-        pvr_exp = (e_a / e_b) if (e_b and e_b > 0) else np.nan
-        npvr = pvr_raw / pvr_exp if pvr_exp and pvr_exp > 0 else np.nan
+        e_a = _baseline_vol_per_min(ctx.baseline, a_start, ts)
+        e_b = _baseline_vol_per_min(ctx.baseline, sess_start, a_start)
+        pexp = (e_a / e_b) if (e_b and e_b > 0) else np.nan
+        npvr = pvr_raw / pexp if pexp and pexp > 0 else np.nan
         rej_vpm = float(sub["volume"].sum()) / max(len(sub), 1)
 
-        # --- entries and risk -------------------------------------------------
         stop = (lo - STOP_BUFFER_ATR * float(atr_b.loc[ts])) if sgn > 0 else \
                (hi + STOP_BUFFER_ATR * float(atr_b.loc[ts]))
         R = sgn * (cl - stop)
         if R <= 0:
             continue
-        nxt = bars_1m[(bars_1m.index >= end) & (bars_1m.index.time < RTH_CLOSE)]
+        nxt = ctx.bars_1m[(ctx.bars_1m.index >= end)
+                          & (ctx.bars_1m.index.time < RTH_CLOSE)]
         lvl = hi + TICK if sgn > 0 else lo - TICK
         brk = nxt[(nxt["high"] >= lvl) if sgn > 0 else (nxt["low"] <= lvl)]
         bt, eb = (brk.index[0], lvl) if len(brk) else (None, np.nan)
 
-        prior_h = [s for s in swings if s.kind == "H" and s.idx < ts]
-        prior_l = [s for s in swings if s.kind == "L" and s.idx < ts]
-
         n_found += 1
         out.append(Signal(
-            signal_id=f"{symbol}_{day}_{side}_{frame}_{ts:%H%M}",
-            symbol=symbol, date=day, side=side, frame=frame, bar_time=ts,
+            signal_id=f"{ctx.symbol}_{ctx.date}_{side}_{frame}_{vwap_anchor}_{ts:%H%M}",
+            symbol=ctx.symbol, date=ctx.date, side=side, frame=frame,
+            vwap_anchor=vwap_anchor, bar_time=ts,
             signal_index_today=n_found, is_first_of_day=(n_found == 1),
             bar_open=op, bar_high=hi, bar_low=lo, bar_close=cl,
-            close_position=cpos, touch_depth_atr=-penetration / atr_d,
+            close_position=cpos, touch_depth_atr=-penetration / ctx.atr_d,
             vwap_at_close=vwc, wicked_through=bool(penetration <= 0),
             pct_session_with_trend=pct_with, vwap_slope_atr=slope,
-            above_ema9=above_ema, new_extreme_last_90m=new_ext, trend_ok=trend_ok,
-            beyond_pmh=bool(sgn * (cl - (pmh if sgn > 0 else pml)) > 0)
-                       if not pd.isna(pmh) else False,
-            beyond_orh=bool(sgn * (cl - (orh if sgn > 0 else orl)) > 0)
-                       if not pd.isna(orh) else False,
+            beyond_all_emas=es["beyond_all_emas"],
+            emas_upsloping=es["emas_upsloping"],
+            ema_ribbon_aligned=es["ema_ribbon_aligned"],
+            upslope_by_1000=es["upslope_by_1000"],
+            dist_ema21_atr=es["dist_ema21_atr"],
+            pct_beyond_ema21_2m=cp.get("pct_beyond_ema21_2m", np.nan),
+            pct_beyond_ema21_5m=cp.get("pct_beyond_ema21_5m", np.nan),
+            clean_90=clean90,
+            beyond_pm_range=beyond_pm, pm_break_atr=pm_break_atr,
+            gap_pct=gap,
+            gap_direction=("up" if (gap or 0) > 0 else
+                           "down" if (gap or 0) < 0 else "flat"),
+            guidance=str(ctx.event.get("guidance", "unknown")),
             open_range_atr=om.get("open_range_atr", np.nan),
             open_is_abnormal=om.get("open_is_abnormal", False),
-            leg_index=len(prior_h) if sgn > 0 else len(prior_l),
             cum_shares_at_entry=cum_sh, cum_dollars_at_entry=cum_usd,
             liquid=bool(cum_sh >= MIN_CUM_SHARES),
-            approach_bars=len(appr), pvr_raw=pvr_raw, pvr_expected=pvr_exp,
-            npvr=npvr,
+            approach_bars=len(appr), pvr_raw=pvr_raw, npvr=npvr,
             reject_vol_ratio=rej_vpm / a_vpm if a_vpm > 0 else np.nan,
             entry_close=cl, stop=stop, R=R, R_pct=R / cl,
             R_atr=R / float(atr_b.loc[ts]),
             entry_break=eb, break_time=bt,
-            R_break=sgn * (eb - stop) if not pd.isna(eb) else np.nan,
         ))
     return out
 

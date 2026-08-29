@@ -269,8 +269,15 @@ def universe_slices(df: pd.DataFrame) -> dict[str, pd.Series]:
         s["liquid_5M+"] = df["liquid"]
     if "open_is_abnormal" in df:
         s["abnormal_open"] = df["open_is_abnormal"]
-    if "beyond_pmh" in df:
-        s["beyond_pmh"] = df["beyond_pmh"]
+    for col, prefix in (("vwap_anchor", "vwap"), ("guidance", "guidance"),
+                        ("gap_direction", "gap")):
+        if col in df:
+            for v in df[col].dropna().unique():
+                s[f"{prefix}_{v}"] = df[col] == v
+    for flag in ("beyond_pm_range", "clean_90", "ema_ribbon_aligned",
+                 "upslope_by_1000"):
+        if flag in df:
+            s[flag] = df[flag].fillna(False)
     split("npvr", "dry_approach", "wet_approach", s)
     split("vwap_slope_atr", "weak_trend", "strong_trend", s)
     split("R_pct", "tight_risk", "wide_risk", s)
