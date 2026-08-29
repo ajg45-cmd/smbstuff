@@ -22,6 +22,7 @@ the exit question is better-posed than the entry question.
 | `docs/06-odds-enhancer-scorecard.md` | The new Playbook archetype scorecard for this setup |
 | `docs/07-decisions-and-exit-lab.md` | Decisions record, the exit rule set, and the universe slices |
 | `docs/08-momentum-gates.md` | **Current.** Momentum gates, VWAP anchors, and the filter ladder |
+| `docs/09-connecting-data.md` | Getting exports to Claude automatically |
 
 ## Shareable summary
 
