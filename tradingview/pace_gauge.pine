@@ -1,0 +1,43 @@
+//@version=6
+// Pace Gauge: today's cumulative volume against the average cumulative volume
+// at the same bar of the session over the last N sessions.
+// UNTESTED DRAFT - written without access to the Pine compiler. Use a regular-hours intraday chart.
+indicator("Pace Gauge (time-of-day cumulative RVOL)", "Pace", overlay = false, precision = 2)
+
+days = input.int(20, "Lookback sessions", minval = 5, maxval = 40)
+
+newDay = timeframe.change("D")
+var float cum = 0.0
+var int   k   = 0
+cum := newDay ? volume : cum + volume
+k   := newDay ? 0 : k + 1
+
+SLOTS = 1000
+var m = matrix.new<float>(days + 1, SLOTS, na)
+if newDay
+    m.remove_row(0)
+    m.add_row(m.rows(), array.new<float>(SLOTS, na))
+if k < SLOTS
+    m.set(m.rows() - 1, k, cum)
+
+float s = 0.0
+int   c = 0
+if k < SLOTS
+    for r = 0 to m.rows() - 2
+        v = m.get(r, k)
+        if not na(v)
+            s += v
+            c += 1
+
+pace = c >= 5 ? cum / (s / c) : na
+nyMin = hour(time, "America/New_York") * 60 + minute(time, "America/New_York")
+noisy = nyMin < 600
+
+col = noisy ? color.gray : pace >= 2 ? color.green : pace >= 1.2 ? color.teal : color.red
+plot(pace, "Pace", color = col, linewidth = 2)
+hline(1.2, "In play", color = color.gray, linestyle = hline.style_dashed)
+hline(2.0, "News-day volume", color = color.gray, linestyle = hline.style_dashed)
+bgcolor(noisy ? color.new(color.gray, 90) : na, title = "Noisy before 10:00")
+
+alertcondition(ta.crossover(pace, 1.2) and not noisy, "Pace crossed above 1.2", "Stock is now in play (pace >= 1.2)")
+alertcondition(ta.crossunder(pace, 1.2) and not noisy, "Pace fell below 1.2", "Pace under 1.2: C size or log only")

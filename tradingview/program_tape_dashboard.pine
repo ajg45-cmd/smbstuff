@@ -1,0 +1,300 @@
+//@version=6
+// Program Tape Dashboard: ten gauges and a decision chain in one table.
+// UNTESTED DRAFT - written without access to the Pine compiler. Check each reading by hand.
+// Use a 1- or 2-minute regular-hours chart. Use Bar Replay to scrub a past session.
+// Green means the condition your own data favoured is present. It does not detect a program.
+indicator("Program Tape Dashboard", "PT Dash", overlay = true, max_bars_back = 500)
+
+// ───────── Inputs
+gA = "Setup"
+atrLen   = input.int(14, "Daily ATR length", group = gA)
+runMin   = input.int(75, "Run lookback (minutes)", group = gA)
+emaTf    = input.timeframe("2", "9 EMA timeframe", group = gA)
+paceDays = input.int(20, "Pace lookback (sessions)", minval = 5, maxval = 40, group = gA)
+lowFloat = input.bool(false, "Low-float mode", group = gA)
+gB = "Context flags"
+fNews = input.bool(false, "Fundamental news is behind the move", group = gB)
+fBB   = input.bool(false, "Buyback name in its open window", group = gB)
+fUL   = input.bool(false, "Lock-up expiry this week", group = gB)
+
+// ───────── Basics
+barMin = timeframe.in_seconds() / 60.0
+newDay = timeframe.change("D")
+[vw, vwUp, vwDn] = ta.vwap(hlc3, newDay, 1)
+sd    = vwUp - vw
+dATR  = request.security(syminfo.tickerid, "D", ta.atr(atrLen)[1], lookahead = barmerge.lookahead_on)
+ema9  = request.security(syminfo.tickerid, emaTf, ta.ema(close, 9))
+nyMin = hour(time, "America/New_York") * 60 + minute(time, "America/New_York")
+
+// ───────── 1. Pace gauge
+var float cum = 0.0
+var int   k   = 0
+cum := newDay ? volume : cum + volume
+k   := newDay ? 0 : k + 1
+SLOTS = 1000
+var m = matrix.new<float>(paceDays + 1, SLOTS, na)
+if newDay
+    m.remove_row(0)
+    m.add_row(m.rows(), array.new<float>(SLOTS, na))
+if k < SLOTS
+    m.set(m.rows() - 1, k, cum)
+
+avgCumAt(int slot) =>
+    float s = 0.0
+    int   c = 0
+    if slot >= 0 and slot < SLOTS
+        for r = 0 to m.rows() - 2
+            v = m.get(r, slot)
+            if not na(v)
+                s += v
+                c += 1
+    c >= 5 ? s / c : na
+
+pace = cum / avgCumAt(k)
+
+// ───────── Run detection: start extreme, then the far extreme since
+L   = math.max(2, math.min(480, int(math.round(runMin / barMin))))
+Lk  = math.min(L, k + 1)
+dir = close < vw ? -1 : 1          // -1: flush under VWAP (long turn). 1: run above VWAP (short turn)
+int   sOff = 0
+int   xOff = 0
+float sP   = dir < 0 ? high : low
+float xP   = dir < 0 ? low : high
+for i = 0 to Lk - 1
+    if dir < 0 ? high[i] > sP : low[i] < sP
+        sP   := dir < 0 ? high[i] : low[i]
+        sOff := i
+for i = 0 to sOff
+    if dir < 0 ? low[i] < xP : high[i] > xP
+        xP   := dir < 0 ? low[i] : high[i]
+        xOff := i
+
+// ───────── 2. Flush meter
+runSize  = math.abs(sP - xP) / dATR
+dist     = math.abs(vw[xOff] - xP) / dATR
+runVol   = cum[xOff] - (cum[sOff] - volume[sOff])
+normA    = avgCumAt(k - sOff - 1)
+normRun  = avgCumAt(k - xOff) - (na(normA) ? 0 : normA)
+volMult  = sOff > xOff and normRun > 0 ? runVol / normRun : pace
+flush    = dist >= 0.8 and runSize >= 0.8
+sweet    = dist >= 1 and dist <= 1.5 and volMult >= 2 and volMult <= 4
+
+// ───────── 3. Seller-still-working flag
+winBars = math.max(1, int(math.round(20 / barMin)))
+iFrom   = math.min(sOff, xOff + winBars)
+int touches = 0
+int cnt     = 0
+for i = xOff to iFrom
+    cnt += 1
+    if dir < 0 ? high[i] >= ema9[i] : low[i] <= ema9[i]
+        touches += 1
+ride = cnt > 0 ? touches / float(cnt) : 0.0
+int tOff = -1
+if xOff >= 1
+    for i = xOff - 1 to 0
+        throughEma = dir < 0 ? close[i] > ema9[i] : close[i] < ema9[i]
+        throughBar = dir < 0 ? close[i] > high[i + 1] : close[i] < low[i + 1]
+        // clean run: a close through the prior bar is enough. Grind: it must clear the 9 EMA.
+        if throughEma or (ride < 0.3 and throughBar)
+            tOff := i
+            break
+sinceMin = xOff * barMin
+turned   = tOff >= 0 and sinceMin >= 2
+string seller = not flush ? "none" : turned ? "turned" : ride >= 0.3 ? "working" : "clean"
+
+// ───────── 4. Room to VWAP (latched at the turn bar once it has turned)
+minStop  = 0.05 * dATR
+roomNow  = math.abs(vw - close) / math.max(minStop, math.abs(close - xP) + syminfo.mintick)
+roomE    = tOff >= 0 ? math.abs(vw[tOff] - close[tOff]) / math.max(minStop, math.abs(close[tOff] - xP) + syminfo.mintick) : roomNow
+room     = seller == "turned" ? roomE : roomNow
+
+// ───────── 5. Bounce clock
+retr = math.abs(sP - xP) > 0 ? math.abs(close - xP) / math.abs(sP - xP) : 0.0
+
+// ───────── 6. One-sided day counter
+var int   nb         = 0
+var int   ab         = 0
+var int   lastCrossK = 0
+var float dayHi      = na
+var float dayLo      = na
+if newDay
+    nb := 0
+    ab := 0
+    lastCrossK := 0
+    dayHi := high
+    dayLo := low
+madeHigh = high > dayHi
+dayHi := math.max(dayHi, high)
+dayLo := math.min(dayLo, low)
+if nyMin >= 590
+    nb += 1
+    if close > vw
+        ab += 1
+    if (close > vw) != (close[1] > vw[1])
+        lastCrossK := k
+share    = nb > 0 ? math.max(ab, nb - ab) / float(nb) : 0.0
+side     = ab >= nb - ab ? 1 : -1
+sinceX   = (k - lastCrossK) * barMin
+vdist    = (close - vw) / dATR
+rangePos = dayHi > dayLo ? (close - dayLo) / (dayHi - dayLo) : 0.5
+oneSided = nb * barMin >= 60 and sinceX >= 60 and math.abs(vdist) >= 0.25
+
+// ───────── 7. VWAP anchored at the run extreme
+float apv = 0.0
+float av  = 0.0
+for i = 0 to xOff
+    apv += hlc3[i] * volume[i]
+    av  += volume[i]
+avwap = flush and xOff >= 1 and av > 0 ? apv / av : na
+
+// ───────── 8. Give-back tracker (push from the day's extreme to the far extreme)
+var float upA = na
+var float upP = na
+var float upCumA = 0.0
+var float upCumP = 0.0
+var int   upKP = 0
+var float dnA = na
+var float dnP = na
+var float dnCumA = 0.0
+var float dnCumP = 0.0
+var int   dnKP = 0
+if newDay or low < upA
+    upA := low
+    upP := high
+    upCumA := cum - volume
+    upCumP := cum
+    upKP := k
+else if high > upP
+    upP := high
+    upCumP := cum
+    upKP := k
+if newDay or high > dnA
+    dnA := high
+    dnP := low
+    dnCumA := cum - volume
+    dnCumP := cum
+    dnKP := k
+else if low < dnP
+    dnP := low
+    dnCumP := cum
+    dnKP := k
+pushPx    = side > 0 ? upP - upA : dnA - dnP
+pushVol   = side > 0 ? upCumP - upCumA : dnCumP - dnCumA
+peakCum   = side > 0 ? upCumP : dnCumP
+sincePeak = (k - (side > 0 ? upKP : dnKP)) * barMin
+gbRetr    = pushPx > 0 ? math.abs((side > 0 ? upP : dnP) - close) / pushPx : 0.0
+z         = pushVol > 0 ? (cum - peakCum) / pushVol : 0.0
+// average share of peak impact remaining, by volume traded since the push ended (Bucci et al. fit)
+remainAt(float zz) =>
+    zz <= 0.1 ? 1 - 0.9 * zz : zz <= 0.25 ? 0.91 - 0.4 * (zz - 0.1) : zz <= 0.5 ? 0.85 - 0.24 * (zz - 0.25) : zz <= 1 ? 0.79 - 0.14 * (zz - 0.5) : zz <= 2 ? 0.72 - 0.08 * (zz - 1) : zz <= 5 ? 0.64 - 0.0333 * (zz - 2) : zz <= 10 ? 0.54 - 0.014 * (zz - 5) : 0.47
+gbExpect = 1 - remainAt(z)
+
+// ───────── 9. Low-float state
+bars30   = math.max(1, int(math.round(30 / barMin)))
+lowest30 = ta.lowest(low, bars30)
+var float legLow = na
+if newDay or madeHigh
+    legLow := lowest30
+legRetr = dayHi > legLow ? (dayHi - close) / (dayHi - legLow) : 0.0
+sdAbove = sd > 0 ? (close - vw) / sd : 0.0
+
+// ───────── Decision chain
+GO   = color.new(color.green, 70)
+WAIT = color.new(color.orange, 70)
+NO   = color.new(color.red, 70)
+IDLE = color.new(color.gray, 85)
+
+string head = "No setup"
+string body = "Within 0.8 ATR of VWAP, no run to fade, no one-way day."
+color  vCol = IDLE
+string grade = ""
+
+if lowFloat
+    if close < vw
+        head := "No adds. Out or flat."
+        body := "Below VWAP another leg came about 1 time in 20."
+        vCol := NO
+    else if sdAbove > 1 and legRetr < 0.37
+        head := "Hold or size up a winner"
+        body := "Holding high: new high in 30 min about 60% of the time. Not an entry."
+        vCol := GO
+    else
+        head := "Hold what you have, add nothing"
+        body := "Above VWAP but not holding the high."
+        vCol := WAIT
+else if oneSided and not (flush and sinceMin < 45)
+    if sincePeak >= 8 and gbRetr > gbExpect + 0.12
+        head := "Flow has likely finished. Exit the core."
+        body := "Fade since the extreme is past the average give-back."
+        vCol := NO
+    else if sincePeak >= 8
+        head := "Push has paused. Trail tight."
+        body := "Expect about a third back by the close."
+        vCol := WAIT
+    else
+        head := side > 0 ? "One-way day up. Hold the core." : "One-way day down. No long turns against it."
+        body := "Trail VWAP while near it, the 5-min 21 EMA once far extended."
+        vCol := GO
+else if flush
+    if seller == "working"
+        head := "No entry. The seller is still working."
+        body := "Run keeps tagging the 9 EMA. Stretch and room do not matter yet."
+        vCol := NO
+    else if seller == "clean"
+        head := "Stalk it. Wait for the 2-minute close."
+        body := "Clean run, no turn yet."
+        vCol := WAIT
+    else
+        atVwap = dir < 0 ? close >= vw : close <= vw
+        if atVwap or roomNow < 0.3
+            head := sinceMin <= 30 ? "At VWAP inside 30 minutes. Sell all of it." : "At VWAP after a slow grind. A piece may stay."
+            body := sinceMin <= 30 ? "Fast snaps fade." : "Keep-a-piece rests on four trades. Keep it small."
+            vCol := sinceMin <= 30 ? GO : WAIT
+        else if sinceMin > 60 and retr < 0.35
+            head := "60 minutes, no progress. Stop waiting."
+            body := "The measured bounce was over inside 30 to 60 minutes."
+            vCol := NO
+        else
+            pts = (pace >= 1.2 ? 1 : 0) + (sweet ? 1 : 0) + (room >= 2 ? 1 : 0) - (fNews ? 1 : 0)
+            if nyMin < 585
+                pts := math.min(pts, 1)
+            grade := pace < 1.2 or room < 2 ? "C" : pts >= 3 ? "A" : pts == 2 ? "B" : "C"
+            head := "Turn confirmed. Grade " + grade + "."
+            body := "Target VWAP. If stopped and the thesis stands, re-enter on the next 2-minute turn."
+            vCol := GO
+if nyMin >= 950
+    head := "15:50. " + head
+    body := "On-close entry has ended. Exit in continuous trading."
+    vCol := vCol == GO ? WAIT : vCol
+
+// ───────── Plots and alerts
+plot(ema9, "2-min 9 EMA", color = color.orange)
+plot(avwap, "VWAP anchored at run extreme", color = color.purple, style = plot.style_linebr, linewidth = 2)
+turnEvt = seller == "turned" and seller[1] != "turned"
+plotshape(turnEvt and dir < 0, "Long turn confirmed", shape.triangleup, location.belowbar, color.green, size = size.small)
+plotshape(turnEvt and dir > 0, "Short turn confirmed", shape.triangledown, location.abovebar, color.red, size = size.small)
+alertcondition(turnEvt, "Turn confirmed", "Turn confirmed: check grade in the dashboard")
+alertcondition(seller == "working" and seller[1] != "working", "Seller still working", "Run is riding the 9 EMA: no entry")
+alertcondition(oneSided and not oneSided[1], "One-way day established", "An hour on one side of VWAP")
+
+// ───────── Dashboard table
+cell(table t, int r, string a, string b, color bg) =>
+    t.cell(0, r, a, text_color = chart.fg_color, text_halign = text.align_left, text_size = size.small, bgcolor = bg)
+    t.cell(1, r, b, text_color = chart.fg_color, text_halign = text.align_left, text_size = size.small, bgcolor = bg)
+
+var table T = table.new(position.top_right, 2, 13, border_width = 1)
+if barstate.islast
+    T.cell(0, 0, head, text_color = chart.fg_color, text_halign = text.align_left, bgcolor = vCol)
+    T.cell(1, 0, body, text_color = chart.fg_color, text_halign = text.align_left, text_size = size.small, bgcolor = vCol)
+    noisy = nyMin < 600
+    cell(T, 1, "1 Pace", str.tostring(pace, "#.00") + "x" + (noisy ? " (noisy before 10:00)" : ""), noisy ? IDLE : pace >= 1.2 ? GO : NO)
+    cell(T, 2, "2 Flush meter", flush ? str.tostring(dist, "#.00") + " ATR, " + str.tostring((sOff - xOff) * barMin, "#") + " min, " + str.tostring(volMult, "#.0") + "x" : "no run", not flush ? IDLE : sweet ? GO : WAIT)
+    cell(T, 3, "3 Seller flag", seller == "working" ? "riding 9 EMA" : seller == "clean" ? "clean run, wait" : seller == "turned" ? "turned" : "-", seller == "working" ? NO : seller == "clean" ? WAIT : seller == "turned" ? GO : IDLE)
+    cell(T, 4, "4 Room to VWAP", flush ? str.tostring(room, "#.0") + "R" : "-", not flush ? IDLE : room >= 2 ? GO : room >= 1 ? WAIT : NO)
+    cell(T, 5, "5 Bounce clock", flush ? str.tostring(sinceMin, "#") + " min, " + str.tostring(retr * 100, "#") + "% back" : "-", not flush ? IDLE : sinceMin > 60 and retr < 0.35 ? NO : sinceMin <= 30 ? GO : WAIT)
+    cell(T, 6, "6 One-sided", str.tostring(share * 100, "#") + "% " + (side > 0 ? "above" : "below") + ", " + str.tostring(vdist, "#.00") + " ATR, range " + str.tostring(rangePos * 100, "#") + "%", oneSided ? GO : IDLE)
+    cell(T, 7, "7 Anchored VWAP", na(avwap) ? "-" : str.tostring(avwap, format.mintick), IDLE)
+    cell(T, 8, "8 Give-back", sincePeak >= 3 ? str.tostring(gbRetr * 100, "#") + "% back, avg " + str.tostring(gbExpect * 100, "#") + "%" : "push extending", sincePeak < 8 or not oneSided ? IDLE : gbRetr > gbExpect + 0.12 ? NO : WAIT)
+    cell(T, 9, "9 Low-float state", str.tostring(sdAbove, "#.0") + " SD, " + str.tostring(legRetr * 100, "#") + "% of leg back", not lowFloat ? IDLE : close < vw ? NO : sdAbove > 1 and legRetr < 0.37 ? GO : WAIT)
+    string flags = (nyMin < 585 ? "before 9:45: C only. " : "") + (nyMin >= 950 ? "15:50 auction window. " : "") + (fNews ? "news: grade -1. " : "") + (fBB ? (nyMin >= 950 ? "issuer buying ended. " : "buyback window open. ") : "") + (fUL ? "lock-up week. " : "")
+    cell(T, 10, "10 Flags", flags == "" ? "none" : flags, flags == "" ? IDLE : WAIT)

@@ -1,0 +1,340 @@
+<title>Indicator Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a bench. Chart and scrubber on top, the decision chain under it, ten gauge tiles below.
+   Same token family as Program Tape so the two pages read as one set. */
+:root{
+  --bg:#f2f4f6; --panel:#ffffff; --ink:#15202b; --muted:#5b6876; --line:#d5dbe2; --soft:#e8ecf0;
+  --accent:#0d5f8f; --accent-soft:#dcebf4; --own:#5a3f99;
+  --go:#1b7a4b; --go-bg:#dcf0e5; --wait:#8a5a00; --wait-bg:#f6e9cd; --no:#b23a2e; --no-bg:#f7dfdb; --idle:#5b6876; --idle-bg:#e8ecf0;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#10161d; --panel:#18212b; --ink:#e6ecf2; --muted:#93a1b0; --line:#2b3745; --soft:#202b37;
+  --accent:#6bb8e6; --accent-soft:#17344a; --own:#b9a3f0;
+  --go:#5cc48d; --go-bg:#173526; --wait:#e2b458; --wait-bg:#3b2f14; --no:#ef8a7d; --no-bg:#44211d; --idle:#93a1b0; --idle-bg:#202b37; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#10161d; --panel:#18212b; --ink:#e6ecf2; --muted:#93a1b0; --line:#2b3745; --soft:#202b37;
+  --accent:#6bb8e6; --accent-soft:#17344a; --own:#b9a3f0;
+  --go:#5cc48d; --go-bg:#173526; --wait:#e2b458; --wait-bg:#3b2f14; --no:#ef8a7d; --no-bg:#44211d; --idle:#93a1b0; --idle-bg:#202b37; color-scheme:dark }
+
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding-block:26px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:clamp(28px,4.6vw,44px);line-height:1.04;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-stretch:108%;font-weight:700;font-size:21px;line-height:1.15;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:650;font-size:15px;margin:0}
+p{margin:0;max-width:70ch}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)} .note{font-size:13px;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+button.chip{font:500 13px var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:7px 12px;cursor:pointer}
+button.chip:hover{border-color:var(--accent)}
+button.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bar input[type=range]{flex:1 1 260px;min-width:0;accent-color:var(--accent)}
+.clockface{font-family:var(--mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;min-width:5ch}
+.toggles{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13.5px}
+.toggles label{display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+.svgbox{overflow-x:auto}
+svg{display:block;width:100%;min-width:620px;height:auto}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:10.5px}
+svg .ax{stroke:var(--line);stroke-width:1;fill:none}
+svg .px{stroke:var(--ink);stroke-width:1.5;fill:none} svg .ghost{stroke:var(--line);stroke-width:1.2;fill:none}
+svg .vw{stroke:var(--accent);stroke-width:2;fill:none} svg .av{stroke:var(--own);stroke-width:1.8;fill:none;stroke-dasharray:5 4}
+svg .em{stroke:var(--wait);stroke-width:1.2;fill:none} svg .bd{stroke:var(--accent);stroke-width:1;fill:none;stroke-dasharray:2 4;opacity:.7}
+svg .vb{fill:var(--muted);opacity:.55} svg .nv{stroke:var(--accent);stroke-width:1.4;fill:none}
+svg .pc{stroke:var(--own);stroke-width:1.8;fill:none} svg .now{stroke:var(--ink);stroke-width:1;stroke-dasharray:3 3}
+svg .mk{fill:var(--no)} svg .mk2{fill:var(--go)} svg text.lab{fill:var(--ink);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:16px;height:0;border-top:2px solid var(--ink);margin-right:6px;vertical-align:middle}
+
+.verdict{border-radius:6px;padding:14px 16px;border:1px solid var(--line);border-left-width:6px;background:var(--panel);display:flex;flex-direction:column;gap:4px}
+.verdict.go{border-left-color:var(--go)} .verdict.wait{border-left-color:var(--wait)} .verdict.no{border-left-color:var(--no)} .verdict.idle{border-left-color:var(--idle)}
+.verdict b{font-family:var(--display);font-size:19px;font-weight:700}
+.chain{display:flex;gap:6px;flex-wrap:wrap;align-items:stretch}
+.gate{flex:1 1 150px;min-width:0;border-radius:5px;padding:9px 11px;border:1px solid var(--line);display:flex;flex-direction:column;gap:2px;font-size:13px}
+.gate small{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+.gate b{font-family:var(--mono);font-size:15px}
+.go{background:var(--go-bg)} .go small,.go b{color:var(--go)}
+.wait{background:var(--wait-bg)} .wait small,.wait b{color:var(--wait)}
+.no{background:var(--no-bg)} .no small,.no b{color:var(--no)}
+.idle{background:var(--idle-bg)} .idle small,.idle b{color:var(--idle)}
+.verdict.go,.verdict.wait,.verdict.no,.verdict.idle{background:var(--panel)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.tile .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.tile .nm{font-family:var(--display);font-weight:650;font-size:14px}
+.pill{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.pill.go{color:var(--go)} .pill.wait{color:var(--wait)} .pill.no{color:var(--no)} .pill.idle{color:var(--idle)}
+.tile .val{font-family:var(--mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile p{font-size:13px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.two>*{min-width:0}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:500}
+th,td{padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+pre.code{white-space:pre;margin:0;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font:12px/1.5 var(--mono);color:var(--ink);max-height:320px}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:10px">
+  <div class="eyebrow">Ten gauges · one simulated session · scrub the clock</div>
+  <h1>Watch the gauges change in order</h1>
+  <p style="font-size:16.5px">Pick a day type, then drag the clock or press play. Every gauge is computed live from the bars to the left of the cursor, the way it would be on your chart. The days are simulated to show how the gauges interact. They are not market data and not a backtest.</p>
+</header>
+
+<section>
+  <div class="chips" id="scChips" role="group" aria-label="Day type"></div>
+  <p class="muted" id="scDesc"></p>
+  <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="bar">
+      <button class="chip" type="button" id="play">Play</button>
+      <span class="clockface" id="clk">9:30</span>
+      <input type="range" id="t" min="5" max="389" value="20" step="1" aria-label="Time of day">
+    </div>
+    <div class="svgbox"><svg id="chart" viewBox="0 0 900 470" role="img" aria-label="Simulated session with indicators"></svg></div>
+    <div class="legend"><span><i></i>price</span><span><i style="border-color:var(--accent)"></i>session VWAP</span><span><i style="border-color:var(--own);border-top-style:dashed"></i>VWAP anchored at the run extreme</span><span><i style="border-color:var(--wait)"></i>2-minute 9 EMA</span><span><i style="border-color:var(--accent);border-top-style:dotted"></i>±1 SD</span><span><i style="border-color:var(--muted)"></i>volume, with the normal curve</span><span><i style="border-color:var(--own)"></i>pace</span></div>
+    <div class="toggles">
+      <label><input type="checkbox" id="fNews"> Fundamental news is behind the move</label>
+      <label><input type="checkbox" id="fBB"> Buyback name in its open window</label>
+      <label><input type="checkbox" id="fUL"> Lock-up expiry this week</label>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">How they interact</div>
+  <h2>The decision chain</h2>
+  <div class="verdict idle" id="verdict"><b id="vHead"></b><span id="vBody"></span><span class="note" id="vWhy"></span></div>
+  <div class="chain" id="chain"></div>
+  <p class="note">The gates run left to right. Pace asks whether the stock is in play at all. The flush meter asks whether the stretch is in your sweet spot. The seller flag is the hard gate: nothing to its right matters until the flow has stopped. Room sets size. After entry the bounce clock and VWAP take over the exit. On one-way days the chain is skipped and the one-sided counter and give-back tracker run the trade.</p>
+</section>
+
+<section>
+  <h2>All ten gauges, right now</h2>
+  <div class="tiles" id="tiles"></div>
+</section>
+
+<section>
+  <h2>Which gauge answers which question</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Question</th><th>Gauge</th><th>It overrides</th><th>It is overridden by</th></tr></thead>
+    <tbody>
+      <tr><td>Is this stock worth trading today?</td><td>1 Pace</td><td>Everything. Under 1.2 caps size at C whatever else is green.</td><td>Nothing</td></tr>
+      <tr><td>Is the stretch the kind that pays?</td><td>2 Flush meter</td><td>The urge to size up because the move is huge</td><td>Seller flag. A perfect stretch with the seller still printing is no trade.</td></tr>
+      <tr><td>Has the flow stopped?</td><td>3 Seller flag</td><td>Flush meter, room, and your read of the tape</td><td>Nothing. It is the hard gate.</td></tr>
+      <tr><td>How big?</td><td>4 Room to VWAP</td><td>Grade from gauges 1 and 2</td><td>News toggle, and the before-9:45 flag</td></tr>
+      <tr><td>Is the bounce still alive?</td><td>5 Bounce clock</td><td>Hope. Past 60 minutes with no progress the average bounce is over.</td><td>One-sided counter, if the day flips to one-way</td></tr>
+      <tr><td>Has the day gone one-way?</td><td>6 One-sided counter</td><td>The sell-at-VWAP rule. A slow reclaim that holds means keep a core.</td><td>Give-back tracker</td></tr>
+      <tr><td>Where is the new flow averaged?</td><td>7 Anchored VWAP</td><td>Nothing. It is a reference line.</td><td>Price action</td></tr>
+      <tr><td>Did the buyer just finish?</td><td>8 Give-back tracker</td><td>One-sided counter. A fade past the average is the exit.</td><td>Nothing</td></tr>
+      <tr><td>Low float: hold, add or leave?</td><td>9 Low-float state</td><td>Adds. Below VWAP there are none.</td><td>Offering or shelf check</td></tr>
+      <tr><td>What does the clock or calendar rule out?</td><td>10 Flags</td><td>Size before 9:45, and buyback stories after 15:50</td><td>Nothing</td></tr>
+    </tbody></table></div>
+</section>
+
+<section>
+  <div class="eyebrow">TradingView</div>
+  <h2>Pine scripts to install</h2>
+  <p class="muted">Two scripts. The dashboard puts all ten gauges and the decision chain in one table on your chart, with the 9 EMA, the anchored VWAP, turn markers and alerts. The pace gauge is a separate pane. Both are untested drafts: I cannot compile Pine from here, so expect to fix a small error or two and check each reading by hand before trusting it.</p>
+  <div class="chips" id="tsChips" role="group" aria-label="Script"></div>
+  <pre class="code" id="tsCode"></pre>
+  <div class="chips"><button class="chip" type="button" id="tsCopy">Copy script</button></div>
+  <div class="panel">
+    <h3>Install and use</h3>
+    <ol style="margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+      <li>Open a 1- or 2-minute chart with regular trading hours only.</li>
+      <li>Open the Pine Editor, paste a script, save it, and add it to the chart.</li>
+      <li>Load at least 20 sessions of history so pace has a curve to compare against.</li>
+      <li>Turn on Bar Replay and step through a past session. The table updates bar by bar, the same way the simulator above does.</li>
+      <li>Set the context flags and low-float mode in the script settings for each name.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <span>Thresholds come from your own Notion studies (simulated forward-test account, small samples) and from the two research reports behind Program Tape. Green means the condition your data favoured is present. It does not mean a program was detected.</span>
+  <span>The simulated sessions assume a daily ATR of 3.00 on a 100.00 stock and a 20-day normal volume curve.</span>
+</footer>
+</div>
+
+<script>
+/*CORE*/
+const ATR=3,N=390;const tmf=i=>{const m=570+i;return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')};
+const wv=i=>1+3.2*Math.exp(-i/25)+2.6*Math.exp(-(N-1-i)/20);
+const WS=(()=>{let s=0;for(let i=0;i<N;i++)s+=wv(i);return s})();
+const NORM=[...Array(N)].map((_,i)=>20e6*wv(i)/WS);
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const lerp=(k,i)=>{for(let j=1;j<k.length;j++)if(i<=k[j][0]){const[a,b]=[k[j-1],k[j]];return a[1]+(b[1]-a[1])*(i-a[0])/(b[0]-a[0])}return k[k.length-1][1]};
+const SC={
+ turn:{n:'Model turn',d:'A fast flush on about 3× volume, a capitulation low, then a snap back to VWAP inside half an hour. Watch the seller flag flip before anything else matters.',
+  px:[[0,100],[4,99.5],[27,93.9],[29,94.3],[50,96.5],[58,96.7],[120,96.2],[220,96.8],[389,97.3]],vm:[[0,2.4],[6,2.8],[26,3.6],[30,3.2],[45,2.2],[90,1.6],[389,1.4]],nz:.05},
+ grind:{n:'Sell-program grind',d:'A slow, steady drift lower on ordinary volume with every pop sold at the 9 EMA. The stretch eventually looks big, but the seller never stops. This is your documented loser.',
+  px:[[0,100],[8,99.5],[150,94.4],[158,95.0],[389,95.6]],vm:[[0,1.3],[20,1.05],[389,.95]],nz:.03,wob:[.42,10,8,150]},
+ trend:{n:'One-way day',d:'An opening flush, a VWAP reclaim near 10:10, then a grind higher all day. The buyer finishes mid-afternoon and about a third of the push comes back.',
+  px:[[0,100],[12,98.5],[24,99.1],[40,100.4],[300,104.6],[335,103.3],[389,103.4]],vm:[[0,2.4],[30,2],[295,1.7],[305,1.05],[389,1.2]],nz:.04,wob:[.12,11,40,300]},
+ lowf:{n:'Low-float runner',d:'A spike, a hold more than one standard deviation above VWAP, a second leg, then VWAP is lost and it bleeds. The state light is the only gauge that matters here.',lf:1,
+  px:[[0,100],[8,101],[40,112],[56,109.6],[82,116.5],[100,113.6],[126,110.6],[142,108.2],[389,104]],vm:[[0,3],[40,8],[82,7],[120,4],[389,2]],nz:.12},
+ over:{n:'Over-stretched flush',d:'A huge drop on more than 4× volume with news behind it. It looks like the best turn of the day. The bounce is weak and it makes a new low.',news:1,
+  px:[[0,100],[30,93.4],[35,91.9],[52,93.3],[74,92.7],[115,90.9],[389,92.1]],vm:[[0,3],[25,5.5],[35,7],[52,4.2],[389,2.6]],nz:.06}
+};
+function gen(k){const s=SC[k],r=rng(k.length*7919+17),c=[],h=[],l=[],v=[];let ar=0;
+  for(let i=0;i<N;i++){ar=.6*ar+(r()-.5)*2*s.nz;let p=lerp(s.px,i)+ar;
+    if(s.wob&&i>=s.wob[2]&&i<=s.wob[3])p+=s.wob[0]*Math.sin(i*2*Math.PI/s.wob[1]);
+    c.push(p);const w=s.nz*(.8+r());h.push(p+w);l.push(p-w);v.push(NORM[i]*lerp(s.vm,i)*(.7+.6*r()))}
+  // cumulative series
+  const vw=[],sd=[],pace=[],cv=[],cn=[];let pv=0,vv=0,p2=0,nn=0;
+  for(let i=0;i<N;i++){pv+=c[i]*v[i];vv+=v[i];p2+=c[i]*c[i]*v[i];nn+=NORM[i];vw.push(pv/vv);sd.push(Math.sqrt(Math.max(0,p2/vv-(pv/vv)**2)));pace.push(vv/nn);cv.push(vv);cn.push(nn)}
+  // 2-minute 9 EMA, held across each 2-minute bar
+  const em=[];let e=c[1];for(let i=0;i<N;i++){if(i%2===1){e=i===1?c[1]:e+(c[i]-e)*.2}em.push(e)}
+  return{k,s,c,h,l,v,vw,sd,pace,cv,cn,em}}
+const GB=[[0,1],[.1,.91],[.25,.85],[.5,.79],[1,.72],[2,.64],[5,.54],[10,.47]];
+function read(D,t,F){const{c,h,l,v,vw,sd,pace,cv,cn,em}=D,p=c[t],R={t,p,vwap:vw[t],pace:pace[t]};
+  const sub=(a,b,x)=>(x[b]-(a>0?x[a-1]:0));
+  // run: extension side decided by where price sits against VWAP
+  const dir=p<vw[t]?-1:1;R.dir=dir;const a0=Math.max(0,t-75);let iS=a0,iX=a0;
+  if(dir<0){for(let i=a0;i<=t;i++)if(h[i]>h[iS])iS=i;iX=iS;for(let i=iS;i<=t;i++)if(l[i]<l[iX])iX=i}
+  else{for(let i=a0;i<=t;i++)if(l[i]<l[iS])iS=i;iX=iS;for(let i=iS;i<=t;i++)if(h[i]>h[iX])iX=i}
+  const xP=dir<0?l[iX]:h[iX],sP=dir<0?h[iS]:l[iS];
+  R.iS=iS;R.iX=iX;R.xP=xP;R.sP=sP;R.runMin=iX-iS;R.dist=Math.abs(vw[iX]-xP)/ATR;R.runSize=Math.abs(sP-xP)/ATR;
+  R.volMult=iX>iS?sub(iS,iX,cv)/sub(iS,iX,cn):pace[t];R.since=t-iX;
+  R.retr=Math.abs(sP-xP)>0?Math.abs(p-xP)/Math.abs(sP-xP):0;
+  // seller flag on 2-minute bars
+  let touch=0,cnt=0;for(let j=Math.max(iS+1,iX-19);j<=iX;j+=2){cnt++;const hi=Math.max(h[j],h[j-1]||h[j]),lo=Math.min(l[j],l[j-1]||l[j]);if(dir<0?hi>=em[j]-.02:lo<=em[j]+.02)touch++}
+  R.ride=cnt?touch/cnt:0;let turned=false,tT=null;for(let j=iX+1;j<=t;j++)if(j%2===1&&j>=3){const ph=Math.max(h[j-2],h[j-3]),pl=Math.min(l[j-2],l[j-3]);if((dir<0?c[j]>em[j]:c[j]<em[j])||(R.ride<.3&&(dir<0?c[j]>ph:c[j]<pl))){turned=true;tT=j;break}}R.tT=tT;
+  const held=dir<0?Math.min(...l.slice(iX+1,t+1).concat([Infinity]))>xP:Math.max(...h.slice(iX+1,t+1).concat([-Infinity]))<xP;
+  R.flush=R.dist>=.8&&R.runSize>=.8;
+  R.seller=!R.flush?'none':(turned&&held&&R.since>=2)?'turned':R.ride>=.3?'working':'clean';
+  // room
+  const stopD=Math.max(.05*ATR,Math.abs(p-xP)+.02);R.roomNow=Math.abs(vw[t]-p)/stopD;R.room=R.seller==='turned'&&tT!=null?Math.abs(vw[tT]-c[tT])/Math.max(.05*ATR,Math.abs(c[tT]-xP)+.02):R.roomNow;
+  // one-sided counter on 5-minute closes from 9:50
+  let ab=0,nb=0,lastX=20;for(let i=24;i<=t;i+=5){nb++;if(c[i]>vw[i])ab++;}
+  for(let i=24;i<=t;i+=5){if((c[i]>vw[i])!==(c[t]>vw[t]))lastX=i}
+  R.share=nb?Math.max(ab,nb-ab)/nb:0;R.side=ab>=nb-ab?1:-1;R.sinceX=t-lastX;R.vdist=(p-vw[t])/ATR;
+  const dH=Math.max(...h.slice(0,t+1)),dL=Math.min(...l.slice(0,t+1));R.rangePos=dH>dL?(p-dL)/(dH-dL):.5;R.dH=dH;R.dL=dL;
+  R.oneSided=nb>=12&&R.sinceX>=60&&Math.abs(R.vdist)>=.25;
+  // anchored VWAP from the run extreme
+  if(t>iX){R.avwap=(sub(iX,t,D.cpv))/sub(iX,t,cv)}
+  // give-back: push from the day's extreme against the trend side to the far extreme
+  const up=R.side>0;let iA=0,iP=0;for(let i=0;i<=t;i++){if(up?l[i]<l[iA]:h[i]>h[iA])iA=i}iP=iA;for(let i=iA;i<=t;i++){if(up?h[i]>h[iP]:l[i]<l[iP])iP=i}
+  const push=Math.abs((up?h[iP]:l[iP])-(up?l[iA]:h[iA]));R.push=push/ATR;R.sincePeak=t-iP;
+  R.gbRetr=push>0?Math.abs((up?h[iP]:l[iP])-p)/push:0;R.z=iP>iA&&t>iP?sub(iP+1,t,cv)/sub(iA,iP,cv):0;
+  let ex=1;for(let j=1;j<GB.length;j++)if(R.z<=GB[j][0]){ex=GB[j-1][1]+(GB[j][1]-GB[j-1][1])*(R.z-GB[j-1][0])/(GB[j][0]-GB[j-1][0]);break}else ex=GB[j][1];
+  R.gbExpect=1-ex;
+  // low-float state
+  R.sdAbove=sd[t]>0?(p-vw[t])/sd[t]:0;let iH=0;for(let i=0;i<=t;i++)if(h[i]>h[iH])iH=i;let ls=Math.max(0,iH-30);for(let i=ls;i<=iH;i++)if(l[i]<l[ls])ls=i;
+  R.legRetr=h[iH]>l[ls]?(h[iH]-p)/(h[iH]-l[ls]):0;
+  return R}
+function verdict(D,R,F){const g=[],lf=D.s.lf,news=F.news;
+  const paceS=R.pace>=1.2?'go':'no',t=R.t;
+  g.push(['1 Pace',R.pace.toFixed(2)+'×',t<30?'idle':paceS,t<30?'noisy before 10:00':R.pace>=2?'news-day volume':R.pace>=1.2?'in play':'not in play']);
+  if(lf){const st=R.p<R.vwap?'no':(R.sdAbove>1&&R.legRetr<.37)?'go':'wait';
+    g.push(['9 Low-float state',R.sdAbove.toFixed(1)+' SD',st,st==='go'?'holding high':st==='no'?'below VWAP':'mid-range']);
+    const V=st==='go'?['go','Hold or size up a winner','More than 1 SD above VWAP with under 37% of the leg retraced: a new high within 30 minutes about 60% of the time. It is not an entry signal. Every mechanical long on it lost.']
+      :st==='no'?['no','No adds. Out or flat.','Below VWAP another leg came about 1 time in 20. Check for a shelf or at-the-market program before any long.']
+      :['wait','Hold what you have, add nothing','Above VWAP but not holding the high. Base rate for a new high is about 20%.'];
+    return{g,V}}
+  const fl=!R.flush?'idle':(R.dist>=1&&R.dist<=1.5&&R.volMult>=2&&R.volMult<=4)?'go':'wait';
+  g.push(['2 Flush meter',R.flush?R.dist.toFixed(2)+' ATR · '+R.volMult.toFixed(1)+'×':'no flush',fl,!R.flush?'under 0.8 ATR':fl==='go'?'sweet spot':R.dist>1.5||R.volMult>4?'over-stretched':'outside sweet spot']);
+  const se={none:'idle',working:'no',clean:'wait',turned:'go'}[R.seller];
+  g.push(['3 Seller flag',{none:'—',working:'riding 9 EMA',clean:'clean run',turned:'turned'}[R.seller],se,{none:'nothing to fade',working:'seller still printing',clean:'wait for the 2-min close',turned:'flow has stopped'}[R.seller]]);
+  const rm=!R.flush?'idle':R.room>=2?'go':R.room>=1?'wait':'no';
+  g.push(['4 Room to VWAP',R.flush?R.room.toFixed(1)+'R':'—',rm,!R.flush?'':R.room>=2?'2R or more':'thin']);
+  let V;
+  if(R.oneSided&&!(R.flush&&R.since<45)){
+    const over=R.sincePeak>=8&&R.gbRetr>R.gbExpect+.12;
+    V=over?['no','Flow has likely finished. Exit the core.','The fade since the high ('+Math.round(R.gbRetr*100)+'% of the push) is past the average give-back for the volume traded ('+Math.round(R.gbExpect*100)+'%).']
+      :R.sincePeak>=8?['wait','Push has paused. Trail tight.','Give-back so far '+Math.round(R.gbRetr*100)+'% against an average of '+Math.round(R.gbExpect*100)+'%. Expect about a third back by the close.']
+      :['go',R.side>0?'One-way day up. Hold the core.':'One-way day down. No long turns against it.',Math.round(R.share*100)+'% of 5-minute bars on one side of VWAP. Trail VWAP while price is within about 0.5 ATR of it, the 5-minute 21 EMA once it is far extended.'];
+  }else if(!R.flush){V=['idle','No setup','Price is within 0.8 ATR of VWAP with no run to fade and no one-way day established.']}
+  else if(R.seller==='working'){V=['no','No entry. The seller is still working.','The run keeps tagging the 2-minute 9 EMA and pops are sold. Riding runs averaged −0.29R in your backtest. Stretch and room do not matter yet.']}
+  else if(R.seller==='clean'){V=['wait','Stalk it. Wait for the 2-minute close.','Clean run, no turn yet. Starting before the close is the NEM 10/23 mistake.']}
+  else{ // turned
+    const dirOK=R.dir<0?R.p<R.vwap:R.p>R.vwap;
+    if(!dirOK||R.roomNow<.3){V=R.since<=30?['go','At VWAP inside 30 minutes. Sell all of it.','Fast snaps fade: keeping a piece helped only 24% of the time (n=17).']:['wait','At VWAP after a slow grind. A piece may stay.','Reached in '+R.since+' minutes. The keep-a-piece rule rests on four trades, so keep it small.']}
+    else if(R.since>60&&R.retr<.35){V=['no','60 minutes, no progress. Stop waiting.','The measured bounce after extreme drops was over inside 30 to 60 minutes.']}
+    else{let pts=(R.pace>=1.2?1:0)+(fl==='go'?1:0)+(R.room>=2?1:0);if(news)pts--;if(t<15)pts=Math.min(pts,1);
+      const gr=R.pace<1.2||R.room<2?'C':pts>=3?'A':pts===2?'B':'C';
+      V=['go','Turn confirmed at '+tmf(R.tT)+'. Grade '+gr+'.',(gr==='A'?'In play, sweet-spot stretch, room and a confirmed turn. This is the trade that deserves A size. ':gr==='B'?'One gate is amber, so one size down. ':'Pace under 1.2 or under 2R of room is C size or a log entry. ')+(news?'News is behind the move, so the grade is cut one notch. ':'')+(t<15?'Before 9:45 is your losing window: C only. ':'')+'Target VWAP. If stopped and the thesis stands, re-enter on the next 2-minute turn.']}}
+  if(t>=380)V=[V[0]==='go'?'wait':V[0],'15:50. '+V[1],'On-close entry has ended and the imbalance is out. Exit in continuous trading. Auction moves revert overnight.'+(F.bb?' Issuer buying stopped at 15:50.':'')];
+  return{g,V}}
+/*ENDCORE*/
+(function(){
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{return localStorage.getItem(k)||d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let D,timer=null;
+function prep(k){D=gen(k);D.cpv=[];let s=0;for(let i=0;i<N;i++){s+=D.c[i]*D.v[i];D.cpv.push(s)}}
+const tm=i=>{const m=570+i;return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')};
+function chips(host,items,cur,onPick){host.innerHTML='';items.forEach(([k,l])=>{const b=document.createElement('button');b.className='chip';b.type='button';b.id=host.id+'-'+k;b.textContent=l;b.setAttribute('aria-pressed',k===cur);b.onclick=()=>{[...host.children].forEach(c=>c.setAttribute('aria-pressed',c===b));onPick(k)};host.appendChild(b)})}
+const F=()=>({news:$('fNews').checked,bb:$('fBB').checked,ul:$('fUL').checked});
+
+function draw(){const t=+$('t').value,R=read(D,t,F()),{g,V}=verdict(D,R,F());$('clk').textContent=tm(t);
+  // chart
+  const L=46,Rr=886,T=12,B=270,VB=360,PB=440,x=i=>L+i*(Rr-L)/(N-1);
+  const lo=Math.min(...D.l)-.3,hi=Math.max(...D.h)+.3,y=p=>B-(p-lo)/(hi-lo)*(B-T);
+  const path=(arr,a,b,f)=>{let s='';for(let i=a;i<=b;i++)s+=(i===a?'':' ')+x(i).toFixed(1)+','+f(arr[i],i).toFixed(1);return s};
+  let h='';
+  const step=(hi-lo)>12?4:(hi-lo)>6?2:1;for(let p=Math.ceil(lo/step)*step;p<hi;p+=step)h+=`<line class="ax" x1="${L}" y1="${y(p)}" x2="${Rr}" y2="${y(p)}" stroke-dasharray="2 5"/><text x="${L-6}" y="${y(p)+4}" text-anchor="end">${p}</text>`;
+  [[0,'9:30'],[30,'10:00'],[90,'11:00'],[150,'12:00'],[210,'13:00'],[270,'14:00'],[330,'15:00'],[380,'15:50']].forEach(([i,s])=>h+=`<line class="ax" x1="${x(i)}" y1="${PB}" x2="${x(i)}" y2="${PB+4}"/><text x="${x(i)}" y="${PB+17}" text-anchor="middle">${s}</text>`);
+  h+=`<polyline class="ghost" points="${path(D.c,t,N-1,y)}"/>`;
+  h+=`<polyline class="bd" points="${path(D.vw,10,t,(v,i)=>y(v+D.sd[i]))}"/><polyline class="bd" points="${path(D.vw,10,t,(v,i)=>y(v-D.sd[i]))}"/>`;
+  h+=`<polyline class="vw" points="${path(D.vw,0,t,y)}"/><polyline class="em" points="${path(D.em,2,t,y)}"/><polyline class="px" points="${path(D.c,0,t,y)}"/>`;
+  if(t>R.iX+1&&(R.flush||D.s.lf)){let s='';for(let i=R.iX+1;i<=t;i++){const a=(D.cpv[i]-D.cpv[R.iX])/(D.cv[i]-D.cv[R.iX]);s+=' '+x(i).toFixed(1)+','+y(a).toFixed(1)}h+=`<polyline class="av" points="${s.trim()}"/>`}
+  if(R.flush){h+=`<circle class="mk" cx="${x(R.iS)}" cy="${y(R.sP)}" r="4"/><circle class="mk2" cx="${x(R.iX)}" cy="${y(R.xP)}" r="4"/><text class="lab" x="${x(R.iX)+7}" y="${y(R.xP)+(R.dir<0?14:-8)}">run extreme ${tm(R.iX)}</text>`}
+  // volume
+  const vmax=Math.max(...D.v)*1.05,vy=v=>VB-v/vmax*(VB-B-22);
+  for(let i=0;i<=t;i+=2){const vv=(D.v[i]+(D.v[i+1]||D.v[i]))/2;h+=`<rect class="vb" x="${(x(i)-.9).toFixed(1)}" y="${vy(vv).toFixed(1)}" width="2.6" height="${(VB-vy(vv)).toFixed(1)}"/>`}
+  h+=`<polyline class="nv" points="${path(NORM,0,N-1,vy)}"/><line class="ax" x1="${L}" y1="${VB}" x2="${Rr}" y2="${VB}"/><text x="${L+4}" y="${B+30}">volume vs normal curve</text>`;
+  // pace
+  const py=v=>PB-Math.min(v,5)/5*(PB-VB-14);h+=`<line class="ax" x1="${L}" y1="${PB}" x2="${Rr}" y2="${PB}"/>`;
+  [1.2,2].forEach(v=>h+=`<line class="ax" x1="${L}" y1="${py(v)}" x2="${Rr}" y2="${py(v)}" stroke-dasharray="2 4"/><text x="${L-6}" y="${py(v)+4}" text-anchor="end">${v}</text>`);
+  h+=`<polyline class="pc" points="${path(D.pace,3,t,py)}"/><text x="${L+4}" y="${VB+12}">pace</text>`;
+  h+=`<line class="now" x1="${x(t)}" y1="${T}" x2="${x(t)}" y2="${PB}"/>`;
+  $('chart').innerHTML=h;
+  // verdict + chain
+  $('verdict').className='verdict '+V[0];$('vHead').textContent=V[1];$('vBody').textContent=V[2];
+  const f=F();$('vWhy').textContent=[f.ul?'Lock-up week: check the prospectus for an early release tied to earnings, and size for range.':'',f.bb&&t<380?'Buyback open window: a patient, price-capped bid may be present in the body of the day. It never chases and cannot be seen.':''].filter(Boolean).join(' ');
+  $('chain').innerHTML=g.map(r=>`<div class="gate ${r[2]}"><small>${r[0]}</small><b>${r[1]}</b><span>${r[3]}</span></div>`).join('');
+  // tiles
+  const up=R.side>0,tl=[];
+  tl.push(['1 Pace gauge',R.pace.toFixed(2)+'×',t<30?'idle':R.pace>=1.2?'go':'no',t<30?'Noisy before 10:00. Read it after.':R.pace>=2?'News-day volume. Turns paid best here. Sell at VWAP.':R.pace>=1.2?'In play. Standard grading.':'Not in play. Turns here won 35%. C size or log.']);
+  tl.push(['2 Flush meter',R.flush?`${R.dist.toFixed(2)} ATR · ${R.runMin} min · ${R.volMult.toFixed(1)}×`:'no run',g.find(r=>r[0][0]==='2')?g.find(r=>r[0][0]==='2')[2]:'idle',R.flush?(R.dist>1.5||R.volMult>4?'Bigger and louder won less: 39% beyond 1.5 ATR, 41% over 4× volume.':'Your sweet spot is 1 to 1.5 ATR on 2 to 4× volume.'):'No stretch of 0.8 ATR or more from VWAP.']);
+  tl.push(['3 Seller-still-working flag',R.flush?Math.round(R.ride*100)+'% of bars tag the EMA':'—',{none:'idle',working:'no',clean:'wait',turned:'go'}[R.seller],{none:'Nothing to fade.',working:'The run is riding the 2-minute 9 EMA. A grind, not a flush.',clean:'Clean run. Wait for a 2-minute bar to close through the prior bar.',turned:'A 2-minute bar closed through the prior bar after a clean run, or through the 9 EMA after a grind.'}[R.seller]]);
+  tl.push(['4 Room to VWAP',R.flush?R.room.toFixed(1)+'R':'—',!R.flush?'idle':R.room>=2?'go':R.room>=1?'wait':'no',R.flush?(R.seller==='turned'?'Measured at the turn bar. ':'Entry here. ')+'Stop a tick past the run extreme, target VWAP. Under 2R is C size.':'Only meaningful when there is a run to fade.']);
+  tl.push(['5 Bounce clock',R.flush?`${R.since} min · ${Math.round(R.retr*100)}% back`:'—',!R.flush?'idle':R.since>60&&R.retr<.35?'no':R.since<=30?'go':'wait',R.flush?'The measured bounce was mostly done by 30 to 60 minutes and averaged 15 to 20% of the drop. Model turns do better.':'Starts at the run extreme.']);
+  tl.push(['6 One-sided day counter',`${Math.round(R.share*100)}% ${up?'above':'below'} · ${R.vdist>=0?'+':''}${R.vdist.toFixed(2)} ATR · range ${Math.round(R.rangePos*100)}%`,R.oneSided?'go':'idle',R.oneSided?'One-way day. Distance from VWAP and range position are the predictors, not the pullback hold.':`${R.sinceX} minutes since the last VWAP cross. Needs an hour on one side.`]);
+  tl.push(['7 Anchored VWAP',R.avwap?R.avwap.toFixed(2):'—','idle',R.avwap?`Flow since ${tm(R.iX)} is averaged here. Session VWAP is ${R.vwap.toFixed(2)}. A reference, not a defended level.`:'Appears once a run extreme is set.']);
+  tl.push(['8 Give-back tracker',R.sincePeak>=3?`${Math.round(R.gbRetr*100)}% back · avg ${Math.round(R.gbExpect*100)}%`:'push still extending',R.sincePeak<8||!R.oneSided?'idle':R.gbRetr>R.gbExpect+.12?'no':'wait',`Push of ${R.push.toFixed(1)} ATR. ${R.sincePeak} minutes since its extreme, ${R.z.toFixed(2)}× its volume traded since. Average: 10% back quickly, a third by the close.`]);
+  tl.push(['9 Low-float state',`${R.sdAbove.toFixed(1)} SD · ${Math.round(R.legRetr*100)}% of leg retraced`,!D.s.lf?'idle':R.p<R.vwap?'no':R.sdAbove>1&&R.legRetr<.37?'go':'wait',D.s.lf?'Over 1 SD above with under 37% retraced: about 60%. Below VWAP: 7 to 8%.':'Only read this on low floats.']);
+  const fl=[];if(t<15)fl.push('before 9:45: C size only');if(t<30)fl.push('pace noisy');if(t>=380)fl.push('15:50: auction window');if(f.news)fl.push('news: grade −1');if(f.bb)fl.push(t>=380?'issuer buying ended':'buyback window open');if(f.ul)fl.push('lock-up week');
+  tl.push(['10 Calendar and clock flags',fl.length?fl.length+' active':'none',fl.length?'wait':'idle',fl.length?fl.join(' · '):'Nothing ruled out by the clock or calendar.']);
+  const PL={go:'GREEN',wait:'AMBER',no:'RED',idle:'OFF'};
+  $('tiles').innerHTML=tl.map(r=>`<div class="tile"><div class="top"><span class="nm">${r[0]}</span><span class="pill ${r[2]}">${PL[r[2]]}</span></div><span class="val">${r[1]}</span><p>${r[3]}</p></div>`).join('');
+}
+function pick(k){prep(k);$('scDesc').textContent=SC[k].d;$('fNews').checked=!!SC[k].news;store.set('il-sc',k);draw()}
+function stop(){clearInterval(timer);timer=null;$('play').textContent='Play'}
+$('play').onclick=()=>{if(timer)return stop();if(+$('t').value>=389)$('t').value=5;$('play').textContent='Pause';timer=setInterval(()=>{const v=+$('t').value+1;if(v>389)return stop();$('t').value=v;draw()},70)};
+$('t').oninput=()=>{draw()};['fNews','fBB','fUL'].forEach(id=>$(id).onchange=draw);
+const k0=SC[store.get('il-sc','turn')]?store.get('il-sc','turn'):'turn';
+chips($('scChips'),Object.entries(SC).map(([k,v])=>[k,v.n]),k0,k=>{stop();$('t').value=k==='turn'?32:k==='grind'?120:k==='trend'?200:k==='lowf'?70:40;pick(k)});
+$('t').value=32;pick(k0);
+
+/* Pine scripts, injected from tradingview/*.pine */
+const TS={"dash": ["Dashboard (all ten)", "//@version=6\n// Program Tape Dashboard: ten gauges and a decision chain in one table.\n// UNTESTED DRAFT - written without access to the Pine compiler. Check each reading by hand.\n// Use a 1- or 2-minute regular-hours chart. Use Bar Replay to scrub a past session.\n// Green means the condition your own data favoured is present. It does not detect a program.\nindicator(\"Program Tape Dashboard\", \"PT Dash\", overlay = true, max_bars_back = 500)\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Inputs\ngA = \"Setup\"\natrLen   = input.int(14, \"Daily ATR length\", group = gA)\nrunMin   = input.int(75, \"Run lookback (minutes)\", group = gA)\nemaTf    = input.timeframe(\"2\", \"9 EMA timeframe\", group = gA)\npaceDays = input.int(20, \"Pace lookback (sessions)\", minval = 5, maxval = 40, group = gA)\nlowFloat = input.bool(false, \"Low-float mode\", group = gA)\ngB = \"Context flags\"\nfNews = input.bool(false, \"Fundamental news is behind the move\", group = gB)\nfBB   = input.bool(false, \"Buyback name in its open window\", group = gB)\nfUL   = input.bool(false, \"Lock-up expiry this week\", group = gB)\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Basics\nbarMin = timeframe.in_seconds() / 60.0\nnewDay = timeframe.change(\"D\")\n[vw, vwUp, vwDn] = ta.vwap(hlc3, newDay, 1)\nsd    = vwUp - vw\ndATR  = request.security(syminfo.tickerid, \"D\", ta.atr(atrLen)[1], lookahead = barmerge.lookahead_on)\nema9  = request.security(syminfo.tickerid, emaTf, ta.ema(close, 9))\nnyMin = hour(time, \"America/New_York\") * 60 + minute(time, \"America/New_York\")\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 1. Pace gauge\nvar float cum = 0.0\nvar int   k   = 0\ncum := newDay ? volume : cum + volume\nk   := newDay ? 0 : k + 1\nSLOTS = 1000\nvar m = matrix.new<float>(paceDays + 1, SLOTS, na)\nif newDay\n    m.remove_row(0)\n    m.add_row(m.rows(), array.new<float>(SLOTS, na))\nif k < SLOTS\n    m.set(m.rows() - 1, k, cum)\n\navgCumAt(int slot) =>\n    float s = 0.0\n    int   c = 0\n    if slot >= 0 and slot < SLOTS\n        for r = 0 to m.rows() - 2\n            v = m.get(r, slot)\n            if not na(v)\n                s += v\n                c += 1\n    c >= 5 ? s / c : na\n\npace = cum / avgCumAt(k)\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Run detection: start extreme, then the far extreme since\nL   = math.max(2, math.min(480, int(math.round(runMin / barMin))))\nLk  = math.min(L, k + 1)\ndir = close < vw ? -1 : 1          // -1: flush under VWAP (long turn). 1: run above VWAP (short turn)\nint   sOff = 0\nint   xOff = 0\nfloat sP   = dir < 0 ? high : low\nfloat xP   = dir < 0 ? low : high\nfor i = 0 to Lk - 1\n    if dir < 0 ? high[i] > sP : low[i] < sP\n        sP   := dir < 0 ? high[i] : low[i]\n        sOff := i\nfor i = 0 to sOff\n    if dir < 0 ? low[i] < xP : high[i] > xP\n        xP   := dir < 0 ? low[i] : high[i]\n        xOff := i\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 2. Flush meter\nrunSize  = math.abs(sP - xP) / dATR\ndist     = math.abs(vw[xOff] - xP) / dATR\nrunVol   = cum[xOff] - (cum[sOff] - volume[sOff])\nnormA    = avgCumAt(k - sOff - 1)\nnormRun  = avgCumAt(k - xOff) - (na(normA) ? 0 : normA)\nvolMult  = sOff > xOff and normRun > 0 ? runVol / normRun : pace\nflush    = dist >= 0.8 and runSize >= 0.8\nsweet    = dist >= 1 and dist <= 1.5 and volMult >= 2 and volMult <= 4\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 3. Seller-still-working flag\nwinBars = math.max(1, int(math.round(20 / barMin)))\niFrom   = math.min(sOff, xOff + winBars)\nint touches = 0\nint cnt     = 0\nfor i = xOff to iFrom\n    cnt += 1\n    if dir < 0 ? high[i] >= ema9[i] : low[i] <= ema9[i]\n        touches += 1\nride = cnt > 0 ? touches / float(cnt) : 0.0\nint tOff = -1\nif xOff >= 1\n    for i = xOff - 1 to 0\n        throughEma = dir < 0 ? close[i] > ema9[i] : close[i] < ema9[i]\n        throughBar = dir < 0 ? close[i] > high[i + 1] : close[i] < low[i + 1]\n        // clean run: a close through the prior bar is enough. Grind: it must clear the 9 EMA.\n        if throughEma or (ride < 0.3 and throughBar)\n            tOff := i\n            break\nsinceMin = xOff * barMin\nturned   = tOff >= 0 and sinceMin >= 2\nstring seller = not flush ? \"none\" : turned ? \"turned\" : ride >= 0.3 ? \"working\" : \"clean\"\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 4. Room to VWAP (latched at the turn bar once it has turned)\nminStop  = 0.05 * dATR\nroomNow  = math.abs(vw - close) / math.max(minStop, math.abs(close - xP) + syminfo.mintick)\nroomE    = tOff >= 0 ? math.abs(vw[tOff] - close[tOff]) / math.max(minStop, math.abs(close[tOff] - xP) + syminfo.mintick) : roomNow\nroom     = seller == \"turned\" ? roomE : roomNow\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 5. Bounce clock\nretr = math.abs(sP - xP) > 0 ? math.abs(close - xP) / math.abs(sP - xP) : 0.0\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 6. One-sided day counter\nvar int   nb         = 0\nvar int   ab         = 0\nvar int   lastCrossK = 0\nvar float dayHi      = na\nvar float dayLo      = na\nif newDay\n    nb := 0\n    ab := 0\n    lastCrossK := 0\n    dayHi := high\n    dayLo := low\nmadeHigh = high > dayHi\ndayHi := math.max(dayHi, high)\ndayLo := math.min(dayLo, low)\nif nyMin >= 590\n    nb += 1\n    if close > vw\n        ab += 1\n    if (close > vw) != (close[1] > vw[1])\n        lastCrossK := k\nshare    = nb > 0 ? math.max(ab, nb - ab) / float(nb) : 0.0\nside     = ab >= nb - ab ? 1 : -1\nsinceX   = (k - lastCrossK) * barMin\nvdist    = (close - vw) / dATR\nrangePos = dayHi > dayLo ? (close - dayLo) / (dayHi - dayLo) : 0.5\noneSided = nb * barMin >= 60 and sinceX >= 60 and math.abs(vdist) >= 0.25\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 7. VWAP anchored at the run extreme\nfloat apv = 0.0\nfloat av  = 0.0\nfor i = 0 to xOff\n    apv += hlc3[i] * volume[i]\n    av  += volume[i]\navwap = flush and xOff >= 1 and av > 0 ? apv / av : na\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 8. Give-back tracker (push from the day's extreme to the far extreme)\nvar float upA = na\nvar float upP = na\nvar float upCumA = 0.0\nvar float upCumP = 0.0\nvar int   upKP = 0\nvar float dnA = na\nvar float dnP = na\nvar float dnCumA = 0.0\nvar float dnCumP = 0.0\nvar int   dnKP = 0\nif newDay or low < upA\n    upA := low\n    upP := high\n    upCumA := cum - volume\n    upCumP := cum\n    upKP := k\nelse if high > upP\n    upP := high\n    upCumP := cum\n    upKP := k\nif newDay or high > dnA\n    dnA := high\n    dnP := low\n    dnCumA := cum - volume\n    dnCumP := cum\n    dnKP := k\nelse if low < dnP\n    dnP := low\n    dnCumP := cum\n    dnKP := k\npushPx    = side > 0 ? upP - upA : dnA - dnP\npushVol   = side > 0 ? upCumP - upCumA : dnCumP - dnCumA\npeakCum   = side > 0 ? upCumP : dnCumP\nsincePeak = (k - (side > 0 ? upKP : dnKP)) * barMin\ngbRetr    = pushPx > 0 ? math.abs((side > 0 ? upP : dnP) - close) / pushPx : 0.0\nz         = pushVol > 0 ? (cum - peakCum) / pushVol : 0.0\n// average share of peak impact remaining, by volume traded since the push ended (Bucci et al. fit)\nremainAt(float zz) =>\n    zz <= 0.1 ? 1 - 0.9 * zz : zz <= 0.25 ? 0.91 - 0.4 * (zz - 0.1) : zz <= 0.5 ? 0.85 - 0.24 * (zz - 0.25) : zz <= 1 ? 0.79 - 0.14 * (zz - 0.5) : zz <= 2 ? 0.72 - 0.08 * (zz - 1) : zz <= 5 ? 0.64 - 0.0333 * (zz - 2) : zz <= 10 ? 0.54 - 0.014 * (zz - 5) : 0.47\ngbExpect = 1 - remainAt(z)\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 9. Low-float state\nbars30   = math.max(1, int(math.round(30 / barMin)))\nlowest30 = ta.lowest(low, bars30)\nvar float legLow = na\nif newDay or madeHigh\n    legLow := lowest30\nlegRetr = dayHi > legLow ? (dayHi - close) / (dayHi - legLow) : 0.0\nsdAbove = sd > 0 ? (close - vw) / sd : 0.0\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Decision chain\nGO   = color.new(color.green, 70)\nWAIT = color.new(color.orange, 70)\nNO   = color.new(color.red, 70)\nIDLE = color.new(color.gray, 85)\n\nstring head = \"No setup\"\nstring body = \"Within 0.8 ATR of VWAP, no run to fade, no one-way day.\"\ncolor  vCol = IDLE\nstring grade = \"\"\n\nif lowFloat\n    if close < vw\n        head := \"No adds. Out or flat.\"\n        body := \"Below VWAP another leg came about 1 time in 20.\"\n        vCol := NO\n    else if sdAbove > 1 and legRetr < 0.37\n        head := \"Hold or size up a winner\"\n        body := \"Holding high: new high in 30 min about 60% of the time. Not an entry.\"\n        vCol := GO\n    else\n        head := \"Hold what you have, add nothing\"\n        body := \"Above VWAP but not holding the high.\"\n        vCol := WAIT\nelse if oneSided and not (flush and sinceMin < 45)\n    if sincePeak >= 8 and gbRetr > gbExpect + 0.12\n        head := \"Flow has likely finished. Exit the core.\"\n        body := \"Fade since the extreme is past the average give-back.\"\n        vCol := NO\n    else if sincePeak >= 8\n        head := \"Push has paused. Trail tight.\"\n        body := \"Expect about a third back by the close.\"\n        vCol := WAIT\n    else\n        head := side > 0 ? \"One-way day up. Hold the core.\" : \"One-way day down. No long turns against it.\"\n        body := \"Trail VWAP while near it, the 5-min 21 EMA once far extended.\"\n        vCol := GO\nelse if flush\n    if seller == \"working\"\n        head := \"No entry. The seller is still working.\"\n        body := \"Run keeps tagging the 9 EMA. Stretch and room do not matter yet.\"\n        vCol := NO\n    else if seller == \"clean\"\n        head := \"Stalk it. Wait for the 2-minute close.\"\n        body := \"Clean run, no turn yet.\"\n        vCol := WAIT\n    else\n        atVwap = dir < 0 ? close >= vw : close <= vw\n        if atVwap or roomNow < 0.3\n            head := sinceMin <= 30 ? \"At VWAP inside 30 minutes. Sell all of it.\" : \"At VWAP after a slow grind. A piece may stay.\"\n            body := sinceMin <= 30 ? \"Fast snaps fade.\" : \"Keep-a-piece rests on four trades. Keep it small.\"\n            vCol := sinceMin <= 30 ? GO : WAIT\n        else if sinceMin > 60 and retr < 0.35\n            head := \"60 minutes, no progress. Stop waiting.\"\n            body := \"The measured bounce was over inside 30 to 60 minutes.\"\n            vCol := NO\n        else\n            pts = (pace >= 1.2 ? 1 : 0) + (sweet ? 1 : 0) + (room >= 2 ? 1 : 0) - (fNews ? 1 : 0)\n            if nyMin < 585\n                pts := math.min(pts, 1)\n            grade := pace < 1.2 or room < 2 ? \"C\" : pts >= 3 ? \"A\" : pts == 2 ? \"B\" : \"C\"\n            head := \"Turn confirmed. Grade \" + grade + \".\"\n            body := \"Target VWAP. If stopped and the thesis stands, re-enter on the next 2-minute turn.\"\n            vCol := GO\nif nyMin >= 950\n    head := \"15:50. \" + head\n    body := \"On-close entry has ended. Exit in continuous trading.\"\n    vCol := vCol == GO ? WAIT : vCol\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Plots and alerts\nplot(ema9, \"2-min 9 EMA\", color = color.orange)\nplot(avwap, \"VWAP anchored at run extreme\", color = color.purple, style = plot.style_linebr, linewidth = 2)\nturnEvt = seller == \"turned\" and seller[1] != \"turned\"\nplotshape(turnEvt and dir < 0, \"Long turn confirmed\", shape.triangleup, location.belowbar, color.green, size = size.small)\nplotshape(turnEvt and dir > 0, \"Short turn confirmed\", shape.triangledown, location.abovebar, color.red, size = size.small)\nalertcondition(turnEvt, \"Turn confirmed\", \"Turn confirmed: check grade in the dashboard\")\nalertcondition(seller == \"working\" and seller[1] != \"working\", \"Seller still working\", \"Run is riding the 9 EMA: no entry\")\nalertcondition(oneSided and not oneSided[1], \"One-way day established\", \"An hour on one side of VWAP\")\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Dashboard table\ncell(table t, int r, string a, string b, color bg) =>\n    t.cell(0, r, a, text_color = chart.fg_color, text_halign = text.align_left, text_size = size.small, bgcolor = bg)\n    t.cell(1, r, b, text_color = chart.fg_color, text_halign = text.align_left, text_size = size.small, bgcolor = bg)\n\nvar table T = table.new(position.top_right, 2, 13, border_width = 1)\nif barstate.islast\n    T.cell(0, 0, head, text_color = chart.fg_color, text_halign = text.align_left, bgcolor = vCol)\n    T.cell(1, 0, body, text_color = chart.fg_color, text_halign = text.align_left, text_size = size.small, bgcolor = vCol)\n    noisy = nyMin < 600\n    cell(T, 1, \"1 Pace\", str.tostring(pace, \"#.00\") + \"x\" + (noisy ? \" (noisy before 10:00)\" : \"\"), noisy ? IDLE : pace >= 1.2 ? GO : NO)\n    cell(T, 2, \"2 Flush meter\", flush ? str.tostring(dist, \"#.00\") + \" ATR, \" + str.tostring((sOff - xOff) * barMin, \"#\") + \" min, \" + str.tostring(volMult, \"#.0\") + \"x\" : \"no run\", not flush ? IDLE : sweet ? GO : WAIT)\n    cell(T, 3, \"3 Seller flag\", seller == \"working\" ? \"riding 9 EMA\" : seller == \"clean\" ? \"clean run, wait\" : seller == \"turned\" ? \"turned\" : \"-\", seller == \"working\" ? NO : seller == \"clean\" ? WAIT : seller == \"turned\" ? GO : IDLE)\n    cell(T, 4, \"4 Room to VWAP\", flush ? str.tostring(room, \"#.0\") + \"R\" : \"-\", not flush ? IDLE : room >= 2 ? GO : room >= 1 ? WAIT : NO)\n    cell(T, 5, \"5 Bounce clock\", flush ? str.tostring(sinceMin, \"#\") + \" min, \" + str.tostring(retr * 100, \"#\") + \"% back\" : \"-\", not flush ? IDLE : sinceMin > 60 and retr < 0.35 ? NO : sinceMin <= 30 ? GO : WAIT)\n    cell(T, 6, \"6 One-sided\", str.tostring(share * 100, \"#\") + \"% \" + (side > 0 ? \"above\" : \"below\") + \", \" + str.tostring(vdist, \"#.00\") + \" ATR, range \" + str.tostring(rangePos * 100, \"#\") + \"%\", oneSided ? GO : IDLE)\n    cell(T, 7, \"7 Anchored VWAP\", na(avwap) ? \"-\" : str.tostring(avwap, format.mintick), IDLE)\n    cell(T, 8, \"8 Give-back\", sincePeak >= 3 ? str.tostring(gbRetr * 100, \"#\") + \"% back, avg \" + str.tostring(gbExpect * 100, \"#\") + \"%\" : \"push extending\", sincePeak < 8 or not oneSided ? IDLE : gbRetr > gbExpect + 0.12 ? NO : WAIT)\n    cell(T, 9, \"9 Low-float state\", str.tostring(sdAbove, \"#.0\") + \" SD, \" + str.tostring(legRetr * 100, \"#\") + \"% of leg back\", not lowFloat ? IDLE : close < vw ? NO : sdAbove > 1 and legRetr < 0.37 ? GO : WAIT)\n    string flags = (nyMin < 585 ? \"before 9:45: C only. \" : \"\") + (nyMin >= 950 ? \"15:50 auction window. \" : \"\") + (fNews ? \"news: grade -1. \" : \"\") + (fBB ? (nyMin >= 950 ? \"issuer buying ended. \" : \"buyback window open. \") : \"\") + (fUL ? \"lock-up week. \" : \"\")\n    cell(T, 10, \"10 Flags\", flags == \"\" ? \"none\" : flags, flags == \"\" ? IDLE : WAIT)\n"], "pace": ["Pace gauge pane", "//@version=6\n// Pace Gauge: today's cumulative volume against the average cumulative volume\n// at the same bar of the session over the last N sessions.\n// UNTESTED DRAFT - written without access to the Pine compiler. Use a regular-hours intraday chart.\nindicator(\"Pace Gauge (time-of-day cumulative RVOL)\", \"Pace\", overlay = false, precision = 2)\n\ndays = input.int(20, \"Lookback sessions\", minval = 5, maxval = 40)\n\nnewDay = timeframe.change(\"D\")\nvar float cum = 0.0\nvar int   k   = 0\ncum := newDay ? volume : cum + volume\nk   := newDay ? 0 : k + 1\n\nSLOTS = 1000\nvar m = matrix.new<float>(days + 1, SLOTS, na)\nif newDay\n    m.remove_row(0)\n    m.add_row(m.rows(), array.new<float>(SLOTS, na))\nif k < SLOTS\n    m.set(m.rows() - 1, k, cum)\n\nfloat s = 0.0\nint   c = 0\nif k < SLOTS\n    for r = 0 to m.rows() - 2\n        v = m.get(r, k)\n        if not na(v)\n            s += v\n            c += 1\n\npace = c >= 5 ? cum / (s / c) : na\nnyMin = hour(time, \"America/New_York\") * 60 + minute(time, \"America/New_York\")\nnoisy = nyMin < 600\n\ncol = noisy ? color.gray : pace >= 2 ? color.green : pace >= 1.2 ? color.teal : color.red\nplot(pace, \"Pace\", color = col, linewidth = 2)\nhline(1.2, \"In play\", color = color.gray, linestyle = hline.style_dashed)\nhline(2.0, \"News-day volume\", color = color.gray, linestyle = hline.style_dashed)\nbgcolor(noisy ? color.new(color.gray, 90) : na, title = \"Noisy before 10:00\")\n\nalertcondition(ta.crossover(pace, 1.2) and not noisy, \"Pace crossed above 1.2\", \"Stock is now in play (pace >= 1.2)\")\nalertcondition(ta.crossunder(pace, 1.2) and not noisy, \"Pace fell below 1.2\", \"Pace under 1.2: C size or log only\")\n"]};
+function showTS(k){$('tsCode').textContent=TS[k][1]}
+chips($('tsChips'),Object.entries(TS).map(([k,v])=>[k,v[0]]),'dash',showTS);showTS('dash');
+$('tsCopy').onclick=()=>{const b=$('tsCopy'),t=$('tsCode').textContent;const done=()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy script',1500)};
+  const sel=()=>{const r=document.createRange();r.selectNodeContents($('tsCode'));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Selected. Press copy.'};
+  try{navigator.clipboard.writeText(t).then(done,sel)}catch(e){sel()}};
+})();
+</script>
