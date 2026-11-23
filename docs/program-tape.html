@@ -1,0 +1,438 @@
+<title>Program Tape</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a desk reference read top to bottom. One interactive session clock is the centrepiece;
+   everything else is quiet tables and bars that carry an evidence tag. */
+:root{
+  --bg:#f2f4f6; --panel:#ffffff; --ink:#15202b; --muted:#5b6876; --line:#d5dbe2; --soft:#e8ecf0;
+  --accent:#0d5f8f; --accent-soft:#dcebf4;
+  --doc:#0d5f8f; --doc-bg:#dcebf4;
+  --prac:#8a5a00; --prac-bg:#f6e9cd;
+  --unv:#8a3b4a; --unv-bg:#f5dfe3;
+  --own:#5a3f99; --own-bg:#e8e1f7;
+  --add:#1b7a4b; --hold:#0d5f8f; --cut:#b23a2e;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#10161d; --panel:#18212b; --ink:#e6ecf2; --muted:#93a1b0; --line:#2b3745; --soft:#202b37;
+  --accent:#6bb8e6; --accent-soft:#17344a;
+  --doc:#6bb8e6; --doc-bg:#17344a;
+  --prac:#e2b458; --prac-bg:#3b2f14;
+  --unv:#e59aa8; --unv-bg:#41222a;
+  --own:#b9a3f0; --own-bg:#2c2447;
+  --add:#5cc48d; --hold:#6bb8e6; --cut:#ef8a7d; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#10161d; --panel:#18212b; --ink:#e6ecf2; --muted:#93a1b0; --line:#2b3745; --soft:#202b37;
+  --accent:#6bb8e6; --accent-soft:#17344a;
+  --doc:#6bb8e6; --doc-bg:#17344a;
+  --prac:#e2b458; --prac-bg:#3b2f14;
+  --unv:#e59aa8; --unv-bg:#41222a;
+  --own:#b9a3f0; --own-bg:#2c2447;
+  --add:#5cc48d; --hold:#6bb8e6; --cut:#ef8a7d; color-scheme:dark }
+
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:1040px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:44px}
+h1{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:clamp(30px,5.2vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-stretch:108%;font-weight:700;font-size:23px;line-height:1.15;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:650;font-size:16px;margin:0}
+p{margin:0;max-width:68ch}
+a{color:var(--accent)}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:17px;color:var(--ink)}
+.muted{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:16px}
+.head{display:flex;flex-direction:column;gap:6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.tag.doc{color:var(--doc);background:var(--doc-bg)} .tag.prac{color:var(--prac);background:var(--prac-bg)}
+.tag.unv{color:var(--unv);background:var(--unv-bg)} .tag.own{color:var(--own);background:var(--own-bg)}
+
+/* header */
+.hero{display:flex;flex-direction:column;gap:14px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;gap:7px;align-items:center}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.split > div{min-width:0}
+.split ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.know{border-top:3px solid var(--add)} .cant{border-top:3px solid var(--cut)}
+
+/* facts strip */
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:6px;background:var(--panel);overflow:hidden}
+.fact{padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.fact b{display:block;font-family:var(--mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.fact span{font-size:13px;color:var(--muted)}
+
+/* buttons */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+button.chip{font:500 13px var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:7px 12px;cursor:pointer}
+button.chip:hover{border-color:var(--accent)}
+button.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* clock */
+.clock{display:flex;gap:4px;flex-wrap:wrap}
+.clock button{flex:1 1 104px;min-width:0;text-align:left;font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-bottom:4px solid var(--line);border-radius:4px;padding:9px 10px;cursor:pointer}
+.clock button small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);font-weight:400}
+.clock button[aria-pressed="true"]{border-color:var(--accent);border-bottom-color:var(--accent);background:var(--accent-soft)}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.act{min-width:0;border-left:3px solid var(--line);padding-left:12px}
+.act.add{border-color:var(--add)} .act.hold{border-color:var(--hold)} .act.cut{border-color:var(--cut)}
+.act h3{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.act.add h3{color:var(--add)} .act.hold h3{color:var(--hold)} .act.cut h3{color:var(--cut)}
+.flow{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.flow li{list-style:none;display:flex;gap:10px;align-items:baseline}
+.flow ul{margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.flow li .tag{flex:none}
+
+/* schematic */
+.svgbox{overflow-x:auto}
+svg{display:block;width:100%;min-width:560px;height:auto}
+svg .bar{fill:var(--accent)} svg .axis{stroke:var(--line);stroke-width:1;fill:none}
+svg .cum{stroke:var(--own);stroke-width:2;fill:none} svg text{fill:var(--muted);font-family:var(--mono);font-size:10.5px}
+svg .blocked{fill:var(--cut);opacity:.16}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.two>div{min-width:0}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:500}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{white-space:nowrap}
+
+/* bars */
+.bars{display:flex;flex-direction:column;gap:9px}
+.brow{display:grid;grid-template-columns:minmax(120px,210px) 1fr 74px;gap:10px;align-items:center;font-size:13.5px}
+.brow > *{min-width:0}
+.track{height:14px;background:var(--soft);border-radius:2px;position:relative}
+.fill{position:absolute;top:0;bottom:0;border-radius:2px;background:var(--own)}
+.fill.neg{background:var(--cut)} .fill.pos{background:var(--add)}
+.zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--muted)}
+.brow .num{text-align:right;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid2>div{min-width:0;display:flex;flex-direction:column;gap:12px}
+.note{font-size:13px;color:var(--muted)}
+
+/* trades */
+.trades{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.trade{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.trade .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.trade .tk{font-family:var(--mono);font-weight:600;font-size:15px}
+.trade .res{font-family:var(--mono);font-size:13px;font-weight:600}
+.res.w{color:var(--add)} .res.l{color:var(--cut)} .res.n{color:var(--muted)}
+.state{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.trade p{font-size:13.5px}
+.trade .shows{border-top:1px solid var(--line);padding-top:8px;font-weight:500}
+
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rules > div{min-width:0}
+footer{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:16px}
+
+@media (max-width:760px){
+  .split,.two,.grid2,.rules,.acts{grid-template-columns:1fr}
+  .facts{grid-template-columns:1fr 1fr}
+  .brow{grid-template-columns:1fr 64px}.brow .lbl{grid-column:1/-1}
+}
+@media (max-width:440px){ .facts{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">TWAP · VWAP · buy and sell programs · your turns, trend days and low floats</div>
+  <h1>You can't see the program. You can see which state the stock is in.</h1>
+  <p class="lede">Execution programs are real, slow and mostly passive. The research proves they leave traces, and nothing in it shows anyone can identify one on a public tape in real time, size it, or know when it ends. What is documented is how one-sided flow behaves while it lasts and after it stops. Your own records rank the same transitions.</p>
+  <div class="legend">
+    <span><i class="tag doc">DOCUMENTED</i> peer-reviewed research, rule text, large samples</span>
+    <span><i class="tag prac">PRACTICE</i> taught by a named trader or firm, no published test</span>
+    <span><i class="tag unv">UNVERIFIED</i> folklore or could not be sourced</span>
+    <span><i class="tag own">OWN DATA</i> your Notion records (simulated forward-test account, small samples)</span>
+  </div>
+  <div class="split">
+    <div class="panel know">
+      <h3>What you can trade around</h3>
+      <ul>
+        <li>One-sided flow that lasts minutes to hours is mostly one participant splitting an order, and it persists. <i class="tag doc">DOCUMENTED</i></li>
+        <li>When the order finishes, about a third of its impact comes back by the same close. <i class="tag doc">DOCUMENTED</i></li>
+        <li>About 30% of parent orders run past one day and tend to reappear at the same half-hour. <i class="tag doc">DOCUMENTED</i></li>
+        <li>Closing-auction moves revert overnight. Late continuous-session moves revert about five times less. <i class="tag doc">DOCUMENTED</i></li>
+      </ul>
+    </div>
+    <div class="panel cant">
+      <h3>What the public tape cannot tell you</h3>
+      <ul>
+        <li>Who is trading, or what kind of participant it is.</li>
+        <li>The total size of the order, or how much is left.</li>
+        <li>Whether it is one parent order or several unrelated ones.</li>
+        <li>Whether the benchmark is VWAP, TWAP, percent of volume or arrival price.</li>
+        <li>When it ends.</li>
+        <li>Whether a held level is one order or many.</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="head"><div class="eyebrow">Measured, not desk lore</div><h2>The average program is small, slow and sits on the bid</h2></div>
+  <div class="facts">
+    <div class="fact"><b>$287k</b><span>average parent order, worked over 84 minutes</span></div>
+    <div class="fact"><b>4.8%</b><span>of volume over the order's life</span></div>
+    <div class="fact"><b>&lt;0.4%</b><span>of child orders are market orders; 81.5% are limits</span></div>
+    <div class="fact"><b>50.6%</b><span>of 2025 volume printed off-exchange, with no side attached</span></div>
+    <div class="fact"><b>~⅓</b><span>of peak impact reverts by the same day's close</span></div>
+    <div class="fact"><b>~30%</b><span>of parent orders run more than one day</span></div>
+  </div>
+  <p class="note">Sample of 2.3 million parent orders and 300 million child orders, 2012–2016. The "5 to 20% of volume" figure quoted on desks could not be sourced. The average program does not lift offers. It posts and waits, which is why most of it is invisible.</p>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">How each algorithm spends its order through the day</div><h2>Five schedules, five different footprints</h2>
+  <p class="muted">Bars show the share of the order worked in each five-minute bucket. The line is percent complete. This is a schematic drawn from the documented parameters, not market data.</p></div>
+  <div class="chips" id="algoChips" role="group" aria-label="Algorithm type"></div>
+  <div class="panel">
+    <div class="svgbox"><svg id="sched" viewBox="0 0 720 250" role="img" aria-label="Schedule schematic"></svg></div>
+    <div class="two" style="margin-top:14px">
+      <div><h3>What it does <i class="tag doc">DOCUMENTED</i></h3><p id="algoDoes" style="margin-top:6px"></p></div>
+      <div><h3>What that implies on the tape <i class="tag unv">INFERENCE</i></h3><p id="algoTape" style="margin-top:6px"></p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Pick a window</div><h2>The session clock: what flow is doing, and your add, hold and cut</h2></div>
+  <div class="clock" id="clock" role="group" aria-label="Time window"></div>
+  <div class="panel" id="clockPanel">
+    <h3 id="winTitle"></h3>
+    <div class="acts" style="margin-top:12px">
+      <div class="act add"><h3>Add / tier in</h3><p id="winAdd"></p></div>
+      <div class="act hold"><h3>Hold</h3><p id="winHold"></p></div>
+      <div class="act cut"><h3>Cut</h3><p id="winCut"></p></div>
+    </div>
+    <div class="flow"><h3>What the evidence says about this window</h3><ul id="winFlow"></ul></div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Tape signatures</div><h2>What each tell actually proves</h2></div>
+  <div class="chips" id="sigChips" role="group" aria-label="Evidence filter"></div>
+  <div class="tbl"><table><thead><tr><th>What you see</th><th>What is established</th><th>Rating</th></tr></thead><tbody id="sigBody"></tbody></table></div>
+  <p class="note">Price above a rising VWAP is a consequence of persistent buying. It is not evidence that anyone defends the line. Any steady drift draws the same picture, and no study was found that tests VWAP as a support level.</p>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Your numbers <i class="tag own">OWN DATA</i></div><h2>Capitulation pays you. Grinds and early exits cost you.</h2></div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Turn exits, average R per trade (77 turns)</h3>
+      <div class="bars" id="barExit"></div>
+      <p class="note">Selling everything at VWAP beat your actual exits by about 0.2R a trade. Model turns made +1.75R held to VWAP against +0.85R on your exits.</p>
+    </div>
+    <div class="panel">
+      <h3>Is a seller still working? Average R</h3>
+      <div class="bars" id="barGrind"></div>
+      <p class="note">Only 9% of turns on relative volume under 1.2 reached VWAP. The RVOL split is directional only (p ≈ 0.12).</p>
+    </div>
+    <div class="panel">
+      <h3>Low floats: new high within 30 minutes (133 sessions)</h3>
+      <div class="bars" id="barLF"></div>
+      <p class="note">The state predicts the next leg, yet every mechanical long built on the hold lost, and adding back after a flush lost in every variant (−0.07R to −0.24R). Use it to stay in or size up a winner you already hold.</p>
+    </div>
+    <div class="panel">
+      <h3>Does keeping a piece past VWAP help?</h3>
+      <div class="tbl" style="border:0"><table>
+        <thead><tr><th>Time to reach VWAP</th><th>n</th><th>All out</th><th>Half + piece</th></tr></thead>
+        <tbody>
+          <tr><td>30 min or less</td><td class="num">17</td><td class="num">+1.83R</td><td class="num">+1.62R</td></tr>
+          <tr><td>30 to 90 min</td><td class="num">4</td><td class="num">+3.04R</td><td class="num">+3.72R</td></tr>
+          <tr><td>Over 90 min</td><td class="num">10</td><td class="num">+3.58R</td><td class="num">+3.28R</td></tr>
+        </tbody></table></div>
+      <p class="note">Fast snaps fade, which matches the documented reversal of imbalances lasting under an hour. The "slow grind, keep a piece" rule rests on four trades. Treat it as untested until the 150-turn recheck.</p>
+    </div>
+  </div>
+  <div class="split">
+    <div class="panel"><h3><span class="num">20 of 33</span> best turns stopped you first</h3><p style="margin-top:6px">Of the turns that closed beyond VWAP, 20 took out your stop before working. Split orders persist for hours, so the first flush low often breaks. Size has to leave room for a second entry.</p></div>
+    <div class="panel"><h3>A flag in your checklist</h3><p style="margin-top:6px">You ask for a stretch of 1.5 ATR or more. In the 95-turn sample, moves of 1 to 1.5 ATR won 75% (+0.26R, n=20) and moves above 1.5 ATR won 39% (−0.27R, n=23). The two measures differ, so recheck before changing the rule.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Your dated trades</div><h2>Which state was the stock in?</h2></div>
+  <div class="chips" id="tradeChips" role="group" aria-label="State filter"></div>
+  <div class="trades" id="trades"></div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Every window</div><h2>Three size rules your data supports</h2></div>
+  <div class="rules">
+    <div class="panel"><h3>Tier in after proof, and keep a second bullet</h3><p style="margin-top:6px">Start small on the 2-minute close and scale to grade once the turn confirms. Stopped but not invalidated means re-enter.</p></div>
+    <div class="panel"><h3>Under 2R to VWAP or RVOL under 1.2 is C size</h3><p style="margin-top:6px">Or a log entry. That is the condition where the seller is usually still there.</p></div>
+    <div class="panel"><h3>An A read gets A size</h3><p style="margin-top:6px">October's best three trades made only $2,500 because no A trade carried A size, while your ten biggest losers carried 2.6 times the notional of your ten biggest winners.</p></div>
+  </div>
+  <div class="panel">
+    <h3>Three tests that would close the gaps</h3>
+    <ul style="margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+      <li>Recheck the slow-grind rule at about 150 turns before it carries size.</li>
+      <li>Log a deliberate small-size overnight test. Your records hold no overnight trade with fills, and "strong close predicts continuation" is unverified in the research.</li>
+      <li>After a one-sided VWAP day, record whether the same half-hour buckets are bid again next session. That targets the best-documented multi-day effect.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <span>Built from the research report "TWAP and VWAP programs on the tape" (23 Nov 2026) and your Notion studies. Your figures come from a simulated forward-test account and one-minute bar replays.</span>
+  <span>Several sources could only be read through search excerpts: broker algorithm documentation, the parent-order sample, the SMB and Alphatrends pages, and NYSE auction pages. Check Rule 10b-18 wording against eCFR before relying on it.</span>
+</footer>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{return localStorage.getItem(k)||d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const TAG={doc:'DOCUMENTED',prac:'PRACTICE',unv:'UNVERIFIED',own:'OWN DATA'};
+const tag=k=>`<i class="tag ${k}">${TAG[k]}</i>`;
+function chips(host,items,cur,onPick){
+  host.innerHTML='';
+  items.forEach(([k,label])=>{const b=document.createElement('button');b.className='chip';b.type='button';b.id=host.id+'-'+k;b.textContent=label;
+    b.setAttribute('aria-pressed',k===cur);b.onclick=()=>{[...host.children].forEach(c=>c.setAttribute('aria-pressed',c===b));onPick(k)};host.appendChild(b)});
+}
+
+/* ---------- schedules ---------- */
+const N=78, u=i=>1+3.2*Math.exp(-i/5)+2.6*Math.exp(-(N-1-i)/4);
+const wob=i=>1+0.35*Math.sin(i*1.7)+0.25*Math.sin(i*0.63+1);
+const ALGOS={
+ vwap:{name:'VWAP',f:i=>u(i),
+  does:'Applies the stock\'s historical intraday volume curve to the order between its start and end time. It works each bucket mostly with passive limit orders and turns aggressive only when it falls behind. The benchmark is often VWAP from order arrival to the close, so the session VWAP on your chart may not be the line it is measured against.',
+  tape:'Heaviest near the open and into the close whatever price does. If it carries a limit price it stops when price trades through the limit, which is one plausible reason a level holds until the order is amended. Nobody has measured this on a public tape.'},
+ twap:{name:'TWAP',f:i=>1,
+  does:'Trades by the clock and ignores volume. On a 2-hour order it is 25% done after 30 minutes and 50% done after an hour, and it does not speed up or slow down for volume or price moves.',
+  tape:'An even drip. It is a larger share of the tape in the midday lull and a smaller share at the open and close. Regular clock-time cycling is documented in broker data. It has not been shown to be readable on public US equity prints.'},
+ pov:{name:'Percent of volume',f:i=>u(i)*wob(i)*((i>=40&&i<=44)?2.4:1),
+  does:'Has no schedule. It trades a set fraction of whatever prints, with settings from 1% to 50% of volume.',
+  tape:'It grows exactly when volume surges, so a volume burst in the direction of the flow gets more of the same behind it. When volume dries up, so does the program.'},
+ arrival:{name:'Arrival price',f:i=>Math.exp(-i/13)*Math.pow(u(i),.3),
+  does:'Benchmarked to the mid-quote when the order was submitted. It front-loads according to an urgency setting to cut the risk of price drifting away.',
+  tape:'Most of the pressure lands early and fades. Impact is concave, so the first part of an order moves price most per share, and the flow thins out as the day goes on.'},
+ buyback:{name:'Buyback (10b-18)',blocked:true,f:i=>(i===0?0.15:(i>=76?0:u(i)*0.8)),
+  does:'The safe harbor bars the opening trade and the last 10 minutes for liquid names (the last 30 for the rest). It caps the day at 25% of four-week average volume, and the bid cannot exceed the highest independent bid or last independent trade.',
+  tape:'A dip-supporting bid that never initiates an uptick. It lives in the body of the day and is gone by 15:50. "Buyback blackout means weakness" is unverified.'}
+};
+function drawSched(k){
+  const a=ALGOS[k], raw=[...Array(N)].map((_,i)=>a.f(i)), sum=raw.reduce((x,y)=>x+y,0), s=raw.map(v=>v/sum);
+  const L=44,R=676,T=14,B=206,W=(R-L)/N,max=Math.max(...s);
+  let h=`<line class="axis" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>`;
+  if(a.blocked){h+=`<rect class="blocked" x="${L}" y="${T}" width="${W}" height="${B-T}"/><rect class="blocked" x="${L+76*W}" y="${T}" width="${2*W}" height="${B-T}"/>`}
+  let cum=0,pts=[];
+  s.forEach((v,i)=>{const bh=(v/max)*(B-T-30);h+=`<rect class="bar" x="${(L+i*W+0.8).toFixed(1)}" y="${(B-bh).toFixed(1)}" width="${(W-1.6).toFixed(1)}" height="${bh.toFixed(1)}"/>`;
+    cum+=v;pts.push(`${(L+(i+1)*W).toFixed(1)},${(B-cum*(B-T)).toFixed(1)}`)});
+  h+=`<polyline class="cum" points="${L},${B} ${pts.join(' ')}"/>`;
+  [['9:30',0],['10:30',12],['11:30',24],['12:30',36],['13:30',48],['14:30',60],['15:30',72],['16:00',78]].forEach(([t,i])=>{
+    const x=L+i*W;h+=`<line class="axis" x1="${x}" y1="${B}" x2="${x}" y2="${B+5}"/><text x="${x}" y="${B+19}" text-anchor="middle">${t}</text>`});
+  [0,50,100].forEach(p=>{const y=B-p/100*(B-T);h+=`<text x="${R+6}" y="${y+4}">${p}%</text>`});
+  h+=`<text x="${L}" y="244">bars: share of the order per 5 minutes</text><text x="${R}" y="244" text-anchor="end">line: percent complete</text>`;
+  $('sched').innerHTML=h; $('algoDoes').textContent=a.does; $('algoTape').textContent=a.tape; store.set('pt-algo',k);
+}
+
+/* ---------- session clock ---------- */
+const WIN=[
+ {k:'open',t:'9:30–9:45',s:'Open',title:'9:30 to 9:45 · the open',
+  add:'No new size except the top plan name, at C size.',hold:'A fast snap, only as far as VWAP.',cut:'The flush extreme breaks.',
+  flow:[['own','Your entries before 9:45 lost in all three months reviewed.'],['doc','A buyback cannot be the opening print. Reversals inside the first hour come from temporary liquidity imbalances.'],['unv','"Algos start at 9:35 to 10:00" and "VWAP from 10:00 to the close" are desk conventions with no rigorous source.']]},
+ {k:'turn',t:'9:45–10:40',s:'Turn window',title:'9:45 to 10:40 · the turn window',
+  add:'Start small on the 2-minute close. Scale to grade only after the turn confirms, with at least 2R to VWAP and relative volume of 1.2 or more. No adds while price rides the 9 EMA or the tape stays heavy.',
+  hold:'Full size to VWAP on model turns and on counter-trend, gapped-against turns.',
+  cut:'Sell everything at VWAP if it arrives inside 30 minutes. If stopped while the thesis stands, re-enter on a new 2-minute turn.',
+  flow:[['own','Hold to VWAP beat your exits by about 0.2R (n=77). Turns riding the 9 EMA averaged −0.29R against +0.24R for clean runs.'],['doc','Split orders keep going for hours, and imbalances lasting under an hour revert. A turn is a bet the flow has ended.'],['prac','The window itself comes from mentor practice, and SMB treats relative volume under 1 as not in play.']]},
+ {k:'type',t:'10:40–11:30',s:'Day type',title:'10:40 to 11:30 · deciding the day type',
+  add:'Add on a higher low at a rising VWAP only when the stock is trending into it and bars have closed on one side since the reclaim. Wait for the next 5-minute bar to confirm.',
+  hold:'A core against the reclaim low.',cut:'A 5-minute close back through VWAP on a continuation trade.',
+  flow:[['own','Your evidence here is single-day cases (MRNA 9/1, MSFT 7/20), so it is weak.'],['prac','The wait-one-bar confirmation rule is taught by Aziz and Breitstein, with no published test.'],['unv','VWAP as a level that buyers defend has never been tested. A European-close effect at 11:30 has no US evidence.'],['doc','The market\'s return from the prior close to 10:00 predicts the 15:30 to 16:00 return at the index level, with an R-squared near 1.6%.']]},
+ {k:'mid',t:'11:30–14:00',s:'Midday',title:'11:30 to 14:00 · midday, your best window',
+  add:'Turns need more extension here. On low floats, add only to a winner above VWAP on a high-dollar-volume day, never after a flush.',
+  hold:'A piece past VWAP when the move took 30 to 90 minutes to get there.',
+  cut:'Volume fades and the bid weakens after a long one-way run. Expect about a third of the move back.',
+  flow:[['own','October\'s only green window. Turns entered after 11:30 averaged +0.80R on your exits (n=17). That runs against SMB\'s advice of least size at midday, and your data should outrank it.'],['doc','Dark share is highest in the middle of the day, so tape reads are least reliable here. Buybacks are allowed.'],['own','The slow-grind rule rests on four trades.'],['unv','The "lunch lull" and a "2:00 to 3:00 pickup" are not quantified in any source found.']]},
+ {k:'aft',t:'14:00–15:30',s:'Afternoon',title:'14:00 to 15:30 · afternoon',
+  add:'No new index mean-reversion trades. Add only to a leader far above VWAP and high in its range.',
+  hold:'Trend-day cores. Use VWAP as the stop while price is near it, and switch to the 5-minute 21 EMA once price is far extended.',
+  cut:'The trail is hit. Do not wait for VWAP on an extended day.',
+  flow:[['own','Across 336 leader days, distance above VWAP (AUC 0.72) and position in the range (0.73) at 1:00 PM predicted a close at the high. The VWAP pullback-and-hold did not (0.51).'],['own','Trail choice rests on one day each: VWAP kept 95% on MRNA 9/1 and only 43% on CRWV 9/8, where the 5-minute 21 EMA kept 77%.'],['doc','Volume ramps toward the close. On one measure about a third of volume trades in the last two continuous hours.']]},
+ {k:'late',t:'15:30–15:50',s:'Into the bell',title:'15:30 to 15:50 · into the bell',
+  add:'None.',hold:'A piece to the close on slow-grind days and one-sided VWAP days.',cut:'Most of a single-stock position that lacks a multi-day reason.',
+  flow:[['doc','Index-level momentum from gamma and leveraged-ETF hedging, much stronger on negative-gamma days.'],['doc','Individual stocks show end-of-day reversal, and arbitrageurs cut positions before the close. Direction is more reliable for the index than for one name.'],['own','Holding every turn to the close averaged +0.05R with a 24% win rate.'],['unv','"Smart money trades the last hour."']]},
+ {k:'auc',t:'15:50–16:00',s:'Auction',title:'15:50 to 16:00 · the auction',
+  add:'None. An imbalance is not an entry at your size.',hold:'Nothing for the auction print.',cut:'Exit in continuous trading before the auction.',
+  flow:[['doc','15:50 is the NYSE cutoff for on-close orders and the imbalance is published. Liquid-name buybacks stop. At 15:55 Nasdaq stops taking market-on-close orders.'],['doc','Auction prices deviate about 8 basis points from the pre-close mid on average and revert fully overnight. Similar moves in the last five continuous minutes reverse about five times less.'],['doc','The share of NYSE auction orders arriving in the last 10 seconds rose from 4.45% to 13.4% in a year, so the 15:50 imbalance is a less complete picture.']]},
+ {k:'on',t:'Overnight',s:'After 16:00',title:'Overnight · not a lane yet',
+  add:'If taken: C or B size, only after profits are banked, only on a fresh catalyst with Day 1 closing near its high, and logged as a test.',
+  hold:'For program continuation, the plan is to re-enter next day at the same clock times. It is not to carry the gap.',
+  cut:'Any position whose only reason is a strong close or an auction spike.',
+  flow:[['own','Your records hold no overnight trade with fills. October\'s after-hours entries went 1 for 9 and lost $812.'],['doc','About 30% of parent orders run past one day, and a stock\'s return in a half-hour predicts the same half-hour on later days for about 40 sessions. Intraday returns continue intraday, overnight returns overnight.'],['unv','"A strong close on volume predicts a gap up." No rigorous study was found.'],['prac','Brian Shannon holds a reduced position overnight after taking profits. SMB wants a Day 1 that closes near its high on a catalyst. Neither is tested.']]}
+];
+function showWin(k){
+  const w=WIN.find(x=>x.k===k)||WIN[1];
+  [...$('clock').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===w.k));
+  $('winTitle').textContent=w.title;$('winAdd').textContent=w.add;$('winHold').textContent=w.hold;$('winCut').textContent=w.cut;
+  $('winFlow').innerHTML=w.flow.map(([t,x])=>`<li>${tag(t)}<span>${x}</span></li>`).join('');store.set('pt-win',w.k);
+}
+WIN.forEach(w=>{const b=document.createElement('button');b.type='button';b.id='win-'+w.k;b.dataset.k=w.k;b.innerHTML=`${w.t}<small>${w.s}</small>`;b.onclick=()=>showWin(w.k);$('clock').appendChild(b)});
+
+/* ---------- signatures ---------- */
+const SIG=[
+ ['Same-side flow persisting for minutes to hours','Trade signs have long memory. Under a few hours the persistence is overwhelmingly one participant splitting an order, not herding. No public-tape detector has been validated.','doc'],
+ ['Partial give-back when the buyer finishes','About one-third of peak impact reverts by the same close, in more than 8 million US orders. An average, with wide dispersion on any single order.','doc'],
+ ['Prints at regular clock intervals','Some algorithms cycle in wall-clock time, and VWAP child orders are measurably predictable in a broker\'s own records. Not shown on public data.','doc'],
+ ['Odd-lot slicing','Real, but odd lots were 64.4% of all trades in February 2025, so they no longer single anything out.','doc'],
+ ['Buy versus sell volume, or delta','Classification rules get 76% to 81% of trades right and fail on prints inside the quote.','doc'],
+ ['A reloading or iceberg bid','Reserve orders exist. Display size can be randomised and each refill goes to the back of the queue, so detection is unreliable.','doc'],
+ ['A clean held bid above a key level','An SMB desk pattern that Bellafiore himself describes as rare. The dropped bid is the exit and a fast rebid is the re-entry. No hit rate is published.','prac'],
+ ['Size goes up as the trade confirms','SMB teaches tiers 1 to 4 with VWAP as a guide. Your own note says size follows proof, not hope.','prac'],
+ ['Price holding above VWAP means a buy program','Follows from arithmetic when buying persists. No test of VWAP as a support level was found. The one tested rule (long above, short below on QQQ) breaks even at one tick of slippage.','unv'],
+ ['TICK beyond ±1000 means a program','It shows many stocks last-printing on one side. The thresholds are untested as a predictor.','unv'],
+ ['Nearly every bar closes on one side of VWAP','Your fingerprint for a one-way day: MRNA 9/1 (73 of 74 five-minute bars), DKS 8/26 (388 of 390 minutes). Honest but late. It confirms buying already happened.','own'],
+ ['Price "holding the 9 EMA like a sell program"','Your documented losing condition for turns: −0.29R against +0.24R for clean runs that never tag it.','own']
+];
+function showSig(f){$('sigBody').innerHTML=SIG.filter(r=>f==='all'||r[2]===f).map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${tag(r[2])}</td></tr>`).join('')}
+
+/* ---------- bars ---------- */
+function bars(host,rows,max,unit){
+  $(host).innerHTML=rows.map(([l,v,txt])=>{
+    let fill;
+    if(unit==='R'){const w=Math.abs(v)/max*50;fill=`<i class="zero" style="left:50%"></i><i class="fill ${v<0?'neg':'pos'}" style="${v<0?`right:50%`:`left:50%`};width:${w}%"></i>`}
+    else fill=`<i class="fill" style="left:0;width:${v/max*100}%"></i>`;
+    return `<div class="brow"><span class="lbl">${l}</span><div class="track">${fill}</div><span class="num">${txt}</span></div>`}).join('');
+}
+bars('barExit',[['Your actual exits',.02,'+0.02R'],['All out at VWAP',.21,'+0.21R'],['Hold all to the close',.05,'+0.05R']],.25,'R');
+bars('barGrind',[['Clean run, never tags 9 EMA',.24,'+0.24R'],['Riding the 9 EMA',-.29,'−0.29R'],['RVOL 1.2+, counter-trend (n=38)',.49,'+0.49R'],['RVOL under 1.2',-.38,'−0.38R']],.5,'R');
+bars('barLF',[['Over 1 SD above VWAP, under 37% retraced',60,'~60%'],['Base rate',20,'~20%'],['Below VWAP',7.5,'7–8%']],100,'%');
+
+/* ---------- trades ---------- */
+const N_='https://app.notion.com/p/';
+const TR=[
+ ['INTC','10/30','working','−$137, −$67','l','Long turns at 09:39 and 09:49 with less than 1R to VWAP. Your note: someone was still actively selling into that pop.','Seller still working. No turn exists yet.','3f8821abbd818198bb2bca504f2b60e9'],
+ ['NEM','10/23','working','early entry','n','Entered three bars early while price was "holding down the 9 EMA like there\'s a sell program".','The 2-minute close is the proof the grind ended.','3f8821abbd818198bb2bca504f2b60e9'],
+ ['AMD','11/11','working','−$204','l','Bought a held bid at 530 at VWAP with 0.1R of room. 530 broke at 09:37 and you sold 522.85 one minute before the real turn.','A held bid has no published hit rate. The dropped bid was the exit.','415821abbd818085875ee4a815fd41bd'],
+ ['AMZN','11/2','working','−$97, +$107','n','Two shorts. Both went on to close 11R and 16R beyond VWAP. Your note: most size should have held for VWAP.','Right thesis. First entry early, second cut early.','40c821abbd81802f9d88d940e6d56806'],
+ ['SVXY','11/5','done','+$3,824','w','Seven red 2-minute bars, the low bar at 2.4 times the run\'s average volume, 3.95R to VWAP, half out at VWAP.','Capitulation volume, then an instant rebid. The flow had finished.','410821abbd818047afa9cd066922ed1d'],
+ ['CRM','8/28','done','hold lost 2.10R','l','86.2% of the day\'s range printed in the first 30 minutes. Holding to the close lost 2.10R.','A fast move that is done early is not a trend day.','38d821abbd818181b17acc0e3a4ea4af'],
+ ['MRNA','9/1','oneside','VWAP trail kept 95%','w','73 of 74 five-minute bars closed above VWAP after 09:50. Every EMA trail lost money.','Price stayed near VWAP, so VWAP was the right stop.','3ce821abbd8181638d9ad0bc6a4440fb'],
+ ['CRWV','9/8','oneside','VWAP trail kept 43%','n','Price ran far above VWAP. The 5-minute 21 EMA kept 77% of the move.','Once extended, VWAP gives back most of the trade.','38d821abbd818181b17acc0e3a4ea4af'],
+ ['IBM','7/16','oneside','missed','n','Capitulation open, then a relentless one-way grind on about 3.2 times relative volume, up 3.8% with the Nasdaq down 1.5%, and 2.57 million shares in the last five minutes and the close.','Bar shape fits a full-day parent order. Whether it was one buyer, a buyback or short covering is unknowable.','3a0821abbd8181a8a9c2e892053e7cb8'],
+ ['MSFT','7/20','oneside','8.2% of a 12.99R move','n','No minute below VWAP after the 10:11 reclaim. You were flat 18 minutes before it.','The reclaim that held for the next bar was the proof.','38d821abbd8181cfbdb8ff94ac1483e9'],
+ ['DKS','8/26','oneside','analysis only','n','388 of 390 minutes on one side of VWAP, and the long had legs over three days on falling volume. WMT 8/24 looked identical intraday and its overnight edge was negative.','Intraday evidence did not separate the two overnight.','38d821abbd8181cfbdb8ff94ac1483e9'],
+ ['CLRO','11/2','lowfloat','loss','l','Your note: adding under VWAP and not on the right side of the V.','Below VWAP, a low float has about a 1-in-20 chance of another leg.','40c821abbd81802f9d88d940e6d56806']
+];
+const ST={working:'Flow still working',done:'Flow finished',oneside:'One-sided day',lowfloat:'Low float'};
+function showTr(f){$('trades').innerHTML=TR.filter(r=>f==='all'||r[2]===f).map(r=>`<article class="trade"><div class="top"><span class="tk">${r[0]} <span class="muted">${r[1]}</span></span><span class="res ${r[4]}">${r[3]}</span></div><span class="state">${ST[r[2]]}</span><p>${r[5]}</p><p class="shows">${r[6]}</p><a href="${N_+r[7]}" target="_blank" rel="noopener" style="font-size:13px">Open in Notion</a></article>`).join('')}
+
+/* ---------- boot ---------- */
+const a0=ALGOS[store.get('pt-algo','vwap')]?store.get('pt-algo','vwap'):'vwap';
+chips($('algoChips'),Object.entries(ALGOS).map(([k,v])=>[k,v.name]),a0,drawSched);drawSched(a0);
+showWin(store.get('pt-win','turn'));
+chips($('sigChips'),[['all','All'],['doc','Documented'],['prac','Practice'],['unv','Unverified'],['own','Own data']],'all',showSig);showSig('all');
+chips($('tradeChips'),[['all','All'],...Object.entries(ST)],'all',showTr);showTr('all');
+})();
+</script>
