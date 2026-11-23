@@ -6,30 +6,31 @@ indicator("Pace Gauge (time-of-day cumulative RVOL)", "Pace", overlay = false, p
 
 days = input.int(20, "Lookback sessions", minval = 5, maxval = 40)
 
-newDay = timeframe.change("D")
+inRTH  = session.ismarket               // regular session only, even with extended hours shown
+newDay = session.isfirstbar_regular
 var float cum = 0.0
 var int   k   = 0
-cum := newDay ? volume : cum + volume
-k   := newDay ? 0 : k + 1
+cum := newDay ? volume : inRTH ? cum + volume : cum
+k   := newDay ? 0 : inRTH ? k + 1 : k
 
 SLOTS = 1000
 var m = matrix.new<float>(days + 1, SLOTS, na)
 if newDay
     m.remove_row(0)
     m.add_row(m.rows(), array.new<float>(SLOTS, na))
-if k < SLOTS
+if inRTH and k < SLOTS
     m.set(m.rows() - 1, k, cum)
 
 float s = 0.0
 int   c = 0
 if k < SLOTS
-    for r = 0 to m.rows() - 2
+    for r = 0 to m.rows() - 2  // prior sessions only
         v = m.get(r, k)
         if not na(v)
             s += v
             c += 1
 
-pace = c >= 5 ? cum / (s / c) : na
+pace = c >= 3 ? cum / (s / c) : na
 nyMin = hour(time, "America/New_York") * 60 + minute(time, "America/New_York")
 noisy = nyMin < 600
 

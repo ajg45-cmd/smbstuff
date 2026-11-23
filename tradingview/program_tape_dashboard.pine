@@ -1,7 +1,7 @@
 //@version=6
 // Program Tape Dashboard: ten gauges and a decision chain in one table.
 // UNTESTED DRAFT - written without access to the Pine compiler. Check each reading by hand.
-// Use a 1- or 2-minute regular-hours chart. Use Bar Replay to scrub a past session.
+// Use a 1- or 2-minute chart. Extended hours may be shown; only regular-session bars are counted. Use Bar Replay to scrub a past session.
 // Green means the condition your own data favoured is present. It does not detect a program.
 indicator("Program Tape Dashboard", "PT Dash", overlay = true, max_bars_back = 500)
 
@@ -19,7 +19,8 @@ fUL   = input.bool(false, "Lock-up expiry this week", group = gB)
 
 // ───────── Basics
 barMin = timeframe.in_seconds() / 60.0
-newDay = timeframe.change("D")
+inRTH  = session.ismarket               // regular session only, even with extended hours shown
+newDay = session.isfirstbar_regular
 [vw, vwUp, vwDn] = ta.vwap(hlc3, newDay, 1)
 sd    = vwUp - vw
 dATR  = request.security(syminfo.tickerid, "D", ta.atr(atrLen)[1], lookahead = barmerge.lookahead_on)
@@ -29,14 +30,14 @@ nyMin = hour(time, "America/New_York") * 60 + minute(time, "America/New_York")
 // ───────── 1. Pace gauge
 var float cum = 0.0
 var int   k   = 0
-cum := newDay ? volume : cum + volume
-k   := newDay ? 0 : k + 1
+cum := newDay ? volume : inRTH ? cum + volume : cum
+k   := newDay ? 0 : inRTH ? k + 1 : k
 SLOTS = 1000
 var m = matrix.new<float>(paceDays + 1, SLOTS, na)
 if newDay
     m.remove_row(0)
     m.add_row(m.rows(), array.new<float>(SLOTS, na))
-if k < SLOTS
+if inRTH and k < SLOTS
     m.set(m.rows() - 1, k, cum)
 
 avgCumAt(int slot) =>
@@ -48,7 +49,7 @@ avgCumAt(int slot) =>
             if not na(v)
                 s += v
                 c += 1
-    c >= 5 ? s / c : na
+    c >= 3 ? s / c : na
 
 pace = cum / avgCumAt(k)
 
@@ -123,10 +124,10 @@ if newDay
     lastCrossK := 0
     dayHi := high
     dayLo := low
-madeHigh = high > dayHi
-dayHi := math.max(dayHi, high)
-dayLo := math.min(dayLo, low)
-if nyMin >= 590
+madeHigh = inRTH and high > dayHi
+dayHi := inRTH ? math.max(nz(dayHi, high), high) : dayHi
+dayLo := inRTH ? math.min(nz(dayLo, low), low) : dayLo
+if inRTH and nyMin >= 590
     nb += 1
     if close > vw
         ab += 1
@@ -158,23 +159,23 @@ var float dnP = na
 var float dnCumA = 0.0
 var float dnCumP = 0.0
 var int   dnKP = 0
-if newDay or low < upA
+if newDay or (inRTH and low < upA)
     upA := low
     upP := high
     upCumA := cum - volume
     upCumP := cum
     upKP := k
-else if high > upP
+else if inRTH and high > upP
     upP := high
     upCumP := cum
     upKP := k
-if newDay or high > dnA
+if newDay or (inRTH and high > dnA)
     dnA := high
     dnP := low
     dnCumA := cum - volume
     dnCumP := cum
     dnKP := k
-else if low < dnP
+else if inRTH and low < dnP
     dnP := low
     dnCumP := cum
     dnKP := k
@@ -262,10 +263,15 @@ else if flush
             head := "Turn confirmed. Grade " + grade + "."
             body := "Target VWAP. If stopped and the thesis stands, re-enter on the next 2-minute turn."
             vCol := GO
-if nyMin >= 950
+if inRTH and nyMin >= 950
     head := "15:50. " + head
     body := "On-close entry has ended. Exit in continuous trading."
     vCol := vCol == GO ? WAIT : vCol
+
+if not inRTH
+    head := "Outside regular hours"
+    body := "Gauges read the regular session only. Rows below are not valid until the open."
+    vCol := IDLE
 
 // ───────── Plots and alerts
 plot(ema9, "2-min 9 EMA", color = color.orange)
@@ -287,7 +293,7 @@ if barstate.islast
     T.cell(0, 0, head, text_color = chart.fg_color, text_halign = text.align_left, bgcolor = vCol)
     T.cell(1, 0, body, text_color = chart.fg_color, text_halign = text.align_left, text_size = size.small, bgcolor = vCol)
     noisy = nyMin < 600
-    cell(T, 1, "1 Pace", str.tostring(pace, "#.00") + "x" + (noisy ? " (noisy before 10:00)" : ""), noisy ? IDLE : pace >= 1.2 ? GO : NO)
+    cell(T, 1, "1 Pace", na(pace) ? "needs 3+ prior sessions loaded" : str.tostring(pace, "#.00") + "x" + (noisy ? " (noisy before 10:00)" : ""), na(pace) or noisy ? IDLE : pace >= 1.2 ? GO : NO)
     cell(T, 2, "2 Flush meter", flush ? str.tostring(dist, "#.00") + " ATR, " + str.tostring((sOff - xOff) * barMin, "#") + " min, " + str.tostring(volMult, "#.0") + "x" : "no run", not flush ? IDLE : sweet ? GO : WAIT)
     cell(T, 3, "3 Seller flag", seller == "working" ? "riding 9 EMA" : seller == "clean" ? "clean run, wait" : seller == "turned" ? "turned" : "-", seller == "working" ? NO : seller == "clean" ? WAIT : seller == "turned" ? GO : IDLE)
     cell(T, 4, "4 Room to VWAP", flush ? str.tostring(room, "#.0") + "R" : "-", not flush ? IDLE : room >= 2 ? GO : room >= 1 ? WAIT : NO)
