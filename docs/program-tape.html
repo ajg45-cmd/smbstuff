@@ -132,7 +132,30 @@ td.num{white-space:nowrap}
 .rules > div{min-width:0}
 footer{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:16px}
 
+.tag.inf{color:var(--muted);background:var(--soft)}
+.jump{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0}
+.jump a{text-decoration:none;white-space:nowrap}.jump a:hover{text-decoration:underline}
+.callout{border:1px solid var(--cut);border-left-width:5px;border-radius:6px;background:var(--panel);padding:14px 16px}
+.callout h3{color:var(--cut)}
+.stack{display:flex;height:34px;border-radius:4px;overflow:hidden;font-family:var(--mono);font-size:12px;font-weight:600}
+.stack span{display:flex;align-items:center;justify-content:center;color:var(--bg);min-width:0;white-space:nowrap;overflow:hidden}
+.stack .p{background:var(--hold)} .stack .m{background:var(--own)} .stack .a{background:var(--add)}
+.keyrow{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.keyrow i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+td.s{color:var(--cut);font-family:var(--mono);font-weight:600} td.b{color:var(--add);font-family:var(--mono);font-weight:600} td.u{color:var(--muted);font-family:var(--mono)}
+pre.code{margin:0;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font:12.5px/1.5 var(--mono);color:var(--ink)}
+.strip{display:flex;height:30px;border-radius:4px;overflow:hidden;font-family:var(--mono);font-size:11.5px;font-weight:600}
+.strip span{display:flex;align-items:center;justify-content:center;min-width:0;white-space:nowrap;overflow:hidden;color:var(--ink)}
+.strip .no{background:var(--unv-bg);color:var(--unv)} .strip .yes{background:var(--doc-bg);color:var(--doc)}
+.ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.three>div{min-width:0}
+.big{font-family:var(--mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2;display:block}
+input[type=range]{width:100%;accent-color:var(--accent)}
+svg .l1{stroke:var(--accent);stroke-width:2;fill:none} svg .l2{stroke:var(--own);stroke-width:2;fill:none;stroke-dasharray:5 4}
+svg .l3{stroke:var(--ink);stroke-width:1.6;fill:none} svg .dot{fill:var(--accent)} svg .zone-lo{fill:var(--cut);opacity:.10} svg .zone-hi{fill:var(--add);opacity:.10} svg .zone-n{fill:var(--muted);opacity:.10}
+svg .barR{fill:var(--cut)} svg .barG{fill:var(--add)} svg .barM{fill:var(--muted)} svg text.strong{fill:var(--ink);font-weight:600}
 @media (max-width:760px){
+  .three{grid-template-columns:1fr}
   .split,.two,.grid2,.rules,.acts{grid-template-columns:1fr}
   .facts{grid-template-columns:1fr 1fr}
   .brow{grid-template-columns:1fr 64px}.brow .lbl{grid-column:1/-1}
@@ -174,6 +197,7 @@ footer{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:
       </ul>
     </div>
   </div>
+  <nav class="jump" id="jump" aria-label="Sections"></nav>
 </header>
 
 <section>
@@ -199,6 +223,204 @@ footer{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:
       <div><h3>What it does <i class="tag doc">DOCUMENTED</i></h3><p id="algoDoes" style="margin-top:6px"></p></div>
       <div><h3>What that implies on the tape <i class="tag unv">INFERENCE</i></h3><p id="algoTape" style="margin-top:6px"></p></div>
     </div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">On your tape</div><h2>A patient buyer prints at the bid</h2>
+  <p class="muted">Of your two pictures, "most volume transacts at the bid, the bid does not drop, and price walks up" matches the documented mechanics. "Breaks the bid then reclaims" has no documented link to program buying. Neither is a signature: heavy volume at a bid that holds is also what a seller hitting a doomed bid looks like.</p></div>
+  <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+    <h3>How one VWAP algorithm's fills were made <i class="tag doc">DOCUMENTED</i></h3>
+    <div class="stack"><span class="p" style="width:65.3%">65.3% passive</span><span class="m" style="width:21.9%">21.9% mid</span><span class="a" style="width:12.8%">12.6%</span></div>
+    <div class="keyrow"><span><i style="background:var(--hold)"></i>Resting on the bid. Prints at the bid, labelled a sell.</span><span><i style="background:var(--own)"></i>Midpoint. Inside the quote, side unknown.</span><span><i style="background:var(--add)"></i>Crossing the spread. The only fills that show as buying, about one in eight.</span></div>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <h3>The same buyer in time and sales</h3>
+      <div class="tbl" style="border:0;margin-top:8px"><table>
+        <thead><tr><th>Time</th><th>Price</th><th>Size</th><th>Bid × ask</th><th>Tape says</th></tr></thead>
+        <tbody class="num">
+          <tr><td>10:41:02</td><td>50.10</td><td>300</td><td>50.10 × 50.12</td><td class="s">SELL</td></tr>
+          <tr><td>10:41:05</td><td>50.10</td><td>200</td><td>50.10 × 50.12</td><td class="s">SELL</td></tr>
+          <tr><td>10:41:09</td><td>50.11</td><td>100</td><td>50.10 × 50.12</td><td class="u">?</td></tr>
+          <tr><td>10:41:14</td><td>50.10</td><td>500</td><td>50.10 × 50.12</td><td class="s">SELL</td></tr>
+          <tr><td>10:41:20</td><td>50.12</td><td>100</td><td>50.10 × 50.12</td><td class="b">BUY</td></tr>
+          <tr><td>10:41:26</td><td>50.10</td><td>400</td><td>50.10 × 50.12</td><td class="s">SELL</td></tr>
+          <tr><td>10:41:31</td><td>50.11</td><td>200</td><td>50.11 × 50.13</td><td class="s">SELL</td></tr>
+        </tbody></table></div>
+      <p class="note">An illustration, not real prints. One buyer took every fill. Delta reads −1,500 and the bid stepped up.</p>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <h3>What that means for your read</h3>
+      <p><b>Delta measures urgency, not accumulation.</b> Signing rules get 76% to 81% of trades right and fail inside the quote. Negative delta with a price that will not fall is consistent with absorption. It is not proof. <i class="tag doc">DOCUMENTED</i></p>
+      <p><b>A refreshing bid is a real mechanism.</b> When a reserve order's shown size is used up, a new slice posts with a new timestamp. You see many prints at one price, more volume than was ever displayed, and size snapping back. <i class="tag doc">DOCUMENTED</i></p>
+      <p><b>What you cannot tell apart:</b> a reserve order, a fully hidden order, several traders re-posting, a market maker requoting, or an algorithm sending a new child order. It shows nothing about size left and can vanish on the next print. <i class="tag inf">INFERENCE</i></p>
+      <p><b>Your rule already fits:</b> the held bid is the entry, the dropped bid is the exit, a fast rebid is the re-entry. AMD 11/11 lost $204 when 530 broke four minutes in. <i class="tag own">OWN DATA</i></p>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Prints your 100-share filter hides, by stock price <i class="tag doc">DOCUMENTED</i></h3>
+      <div class="bars" id="barFilter"></div>
+      <p class="note">Odd lots were 66% of all US trades in August 2025 and 83.4% above $250. By volume they are far smaller (about 6% of exchange volume in 2021, under 30% in high-priced names). A small print is now more likely a slice of a big order, so the filter leans away from institutional child orders in expensive stocks.</p>
+    </div>
+    <div class="panel">
+      <h3>Set the filter by price tier <i class="tag inf">INFERENCE</i></h3>
+      <div class="tbl" style="border:0"><table>
+        <thead><tr><th>Stock price</th><th>Round lot since Nov 2025</th><th>Your filter</th></tr></thead>
+        <tbody>
+          <tr><td>Under about $50</td><td class="num">100</td><td>Keep 100. Little is lost.</td></tr>
+          <tr><td>$50 to $250</td><td class="num">100</td><td>Usable. Absorption at a level is undercounted.</td></tr>
+          <tr><td>$250.01 to $1,000</td><td class="num">40</td><td>Lower to 40.</td></tr>
+          <tr><td>Above $1,000</td><td class="num">10</td><td>Lower to 10, or read volume at price per bar.</td></tr>
+        </tbody></table></div>
+      <p class="note">In a $600 stock a 100-share minimum is a 2.5-round-lot minimum. Your October result in $200-plus names was −$4,148. Nothing shows the filter caused it, but that is where your tape is thinnest.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">The indicator you can build</div><h2>A pace gauge: today's volume against the stock's own curve</h2>
+  <p class="muted">It measures conditions. It cannot show that a program has fallen behind, because the order's size, side and schedule are visible only to the broker. What it can say is what any scheduled order would be facing, if one exists.</p></div>
+  <div class="chips" id="paceChips" role="group" aria-label="Day type"></div>
+  <div class="panel">
+    <div class="svgbox"><svg id="pace" viewBox="0 0 720 250" role="img" aria-label="Pace gauge schematic"></svg></div>
+    <div class="two" style="margin-top:14px">
+      <div><h3>What the reading documents</h3><p id="paceDoc" style="margin-top:6px"></p></div>
+      <div><h3>What it implies for scheduled orders <i class="tag inf">INFERENCE</i></h3><p id="paceInf" style="margin-top:6px"></p></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Formulas</h3>
+      <div class="tbl" style="border:0"><table><tbody>
+        <tr><td><b>Pace now</b></td><td class="num" style="white-space:normal">today's cumulative volume at time t ÷ 20-day average cumulative volume at time t</td></tr>
+        <tr><td><b>Normal curve</b></td><td class="num" style="white-space:normal">p(t) = average of (cumulative volume at t ÷ day total)</td></tr>
+        <tr><td><b>Projected day volume</b></td><td class="num" style="white-space:normal">today's cumulative volume ÷ p(t)</td></tr>
+      </tbody></table></div>
+      <p class="note">Build it per symbol on 5-minute regular-hours bars over 20 sessions. Drop earnings, expiration and half days from the lookback, and keep the closing auction out. Ignore readings before about 10:00. Brokers mostly use this same simple historical curve, so your gauge approximates what the schedules were built from.</p>
+    </div>
+    <div class="panel">
+      <h3>thinkScript draft <i class="tag unv">UNTESTED</i></h3>
+      <pre class="code" id="tsCode"># Cumulative RVOL by time of day - UNTESTED DRAFT
+# Intraday chart, extended hours OFF.
+input days = 20;
+def barsPerDay = RoundDown(23400000 / GetAggregationPeriod(), 0);
+def newDay = GetYYYYMMDD() != GetYYYYMMDD()[1];
+def cumVol = if newDay then volume else cumVol[1] + volume;
+def sumPrior = fold i = 1 to days + 1 with s = 0
+               do s + GetValue(cumVol, i * barsPerDay);
+def avgPrior = sumPrior / days;
+plot RVOLcum = if avgPrior > 0 then cumVol / avgPrior else Double.NaN;
+plot One = 1;</pre>
+      <div class="chips"><button class="chip" type="button" id="tsCopy">Copy script</button></div>
+      <p class="note">Not run. It assumes every bar exists and no half days are in the window, so check it against a hand calculation. The chart must load the 20 lookback days, and a script cannot read bars finer than the chart's own.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Interval VWAP</div><h2>Each order is graded against its own VWAP, not the line on your chart</h2>
+  <p class="muted">The "interval" is the order's own life, from the moment the desk enters to the moment it finishes. It is not a clock interval. Move the start time to see the benchmark change.</p></div>
+  <div class="panel">
+    <label for="ivStart" class="num" id="ivLabel" style="font-size:13px"></label>
+    <input type="range" id="ivStart" min="0" max="60" value="15" step="1">
+    <div class="svgbox"><svg id="iv" viewBox="0 0 720 250" role="img" aria-label="Interval VWAP schematic"></svg></div>
+    <p class="note" id="ivNote"></p>
+  </div>
+  <div class="split">
+    <div class="panel"><h3>Round times draw volume <i class="tag doc">DOCUMENTED</i></h3><p style="margin-top:6px">Volume and trade count jumped about 20% at round 5, 10, 30 and 60-minute marks, with no change in trading costs. The sample is 2003 to 2006 and has no later replication.</p></div>
+    <div class="panel"><h3>Round times do not draw reversals <i class="tag unv">UNVERIFIED</i></h3><p style="margin-top:6px">No study tests reversal frequency at 10:00 or 10:30. The one hard clock event is 15:50, when on-close entry ends and the imbalance is published. Scheduled economic releases are a plausible reason for turns near round times, so check the calendar.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">After the order ends</div><h2>Two-thirds of the push stays. One-third comes back.</h2></div>
+  <div class="callout"><h3>Correction to "mean reverts 2/3 of the move"</h3><p style="margin-top:6px">It is the other way round. At that day's close, about two-thirds of a finished order's peak impact is still in the price (0.66 ± 0.04 across about 8 million orders). About one-third has reverted. A finished buyer leaves a higher price, and a finished seller a lower one.</p></div>
+  <div class="panel">
+    <div class="svgbox"><svg id="impact" viewBox="0 0 720 260" role="img" aria-label="Impact build and decay"></svg></div>
+    <p class="note">The rise is the documented square-root shape. The decay points are arithmetic from the fitted curve in the study, in volume time: how much has traded since the order ended, relative to what traded while it ran. They are averages with very wide dispersion.</p>
+  </div>
+  <div class="three">
+    <div class="panel"><h3>Why any of it comes back</h3><p style="margin-top:6px">While a big buyer works, sellers only supply stock at worse prices. Part of the rise is a fee for liquidity and fades when the buying stops. Part is information that someone large wants the stock, and that stays.</p></div>
+    <div class="panel"><h3>How fast</h3><p style="margin-top:6px">For an order that ran 30 minutes: about 10% back in the first few minutes, 20 to 30% after another 15 to 30 minutes of similar volume, and about a third once twice the order's volume has traded.</p></div>
+    <div class="panel"><h3>News changes it</h3><p style="margin-top:6px">Orders with no information behind them (cash flows) reverted almost completely in two to five days. Informed flow should retrace least. The tape does not say which you are watching, so news is your best proxy.</p></div>
+  </div>
+  <div class="panel">
+    <h3>How long orders last: four numbers that count different things <i class="tag doc">DOCUMENTED</i></h3>
+    <div class="tbl" style="border:0;margin-top:8px"><table>
+      <thead><tr><th>Figure</th><th>What was counted</th></tr></thead>
+      <tbody>
+        <tr><td class="num">35 min median</td><td>One broker ticket on one day (2007–2010)</td></tr>
+        <tr><td class="num">84 min average</td><td>Algorithmic parent orders, $287k each (2012–2016)</td></tr>
+        <tr><td class="num">92.5% same day</td><td>Institutional orders by count</td></tr>
+        <tr><td class="num">1.38 days average</td><td>Parent orders stitched across days and brokers. About 30% span more than one day.</td></tr>
+      </tbody></table></div>
+    <p class="note">A fund buying over four days shows up as many short tickets. By count most orders are short. By dollars the long tail matters. Size relative to daily volume, urgency and the manager's style drive duration. On a news day volume is more than double, so a fixed order finishes faster. Assume any single order behind a move is more likely to end within the hour than to last the day. All-day persistence is usually several same-side orders overlapping.</p>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Your turn trade</div><h2>The waterfall is not a VWAP or TWAP order</h2>
+  <p class="muted">A scheduled order cannot move a stock 1 ATR in 20 to 30 minutes. That takes news, urgent selling at very high participation, several sellers at once, or liquidity providers stepping back, usually together.</p></div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Price push in a 20-minute window, in daily volatility <i class="tag inf">INFERENCE</i></h3>
+      <div class="bars" id="barPush"></div>
+      <p class="note">Square-root law arithmetic. An all-day VWAP order for 10% of the day's volume pushes price about a third of a day's volatility over the whole session. Stop cascades and forced liquidation are the usual desk explanations for the rest and are unmeasured.</p>
+    </div>
+    <div class="panel">
+      <h3>The only measured bounce after extreme drops <i class="tag doc">DOCUMENTED</i></h3>
+      <div class="bars" id="barReb"></div>
+      <p class="note">Liquid US stocks, 2000 to 2002, drops of 4% or more inside an hour. The bounce was 15 to 20% of the drop, mostly in the first 10 to 30 minutes, with nothing further from 60 to 120 minutes. The sample is old and more extreme than a 1 ATR flush.</p>
+    </div>
+    <div class="panel">
+      <h3>Your turns: bigger and louder was not better <i class="tag own">OWN DATA</i></h3>
+      <div class="bars" id="barLoud"></div>
+      <p class="note">Win rates from your 95-turn sample. This fits "the seller finished" better than "volume climax". No rigorous test of climax volume exists anywhere in the research.</p>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <h3>What to expect from a turn</h3>
+      <p>The average flush does not return to VWAP. Your graded model turns are the exception: 67% reached it. That is the case for grading hard.</p>
+      <p>News behind the flush lowers the grade. At daily horizons, moves with news drift and moves without news reverse. Nobody has split intraday bounces by news. <i class="tag doc">DOCUMENTED</i></p>
+      <p>Sixty minutes after the low with no progress, stop expecting mean reversion to do the work.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">The half-hour effect</div><h2>Same clock window, next day. Not the rest of today.</h2>
+  <p class="muted">A stock that beat other stocks in a half-hour tends to beat them again in the same half-hour on following days, for about 40 sessions. It does not say an opening drive persists. Within the same day the next half-hour slightly reverses.</p></div>
+  <div class="panel">
+    <h3>Next-day edge by half-hour, in basis points <i class="tag doc">DOCUMENTED</i></h3>
+    <div class="svgbox"><svg id="hh" viewBox="0 0 720 230" role="img" aria-label="Half-hour effect by time of day"></svg></div>
+    <p class="note">Top-minus-bottom decile spread, 1,715 NYSE stocks, 2001 to 2005. The study reports over 11 at the open, over 8 at the close and an average of 1.75 from 10:00 to 15:30, so the middle bars show that average. After paying spreads the strategy loses 24 to 25 basis points. No replication on later data was found.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Situation</th><th>What the result says</th><th>What it does not say</th></tr></thead>
+    <tbody>
+      <tr><td><b>NVDA beats most stocks 9:30–10:00 Monday</b></td><td>Across many such stocks, winners beat losers by about 11 basis points 9:30–10:00 Tuesday. On a $100 stock that is 11 cents for the whole long-short spread.</td><td>That NVDA trends up the rest of Monday, or rises Tuesday in absolute terms.</td></tr>
+      <tr><td><b>The same Monday, 10:00–10:30</b></td><td>A small reversal of the 9:30–10:00 relative move.</td><td>That the opening drive continues.</td></tr>
+      <tr><td><b>Relatively bid 12:30–13:00 Wednesday</b></td><td>A tilt of about 1.75 basis points in the same window Thursday. Real statistically, invisible on a chart.</td><td>Anything tradable for one stock on one day.</td></tr>
+      <tr><td><b>Relatively strong 15:30–16:00</b></td><td>Over 8 basis points in the last half-hour next day.</td><td>That it gaps up. Overnight returns were excluded.</td></tr>
+    </tbody></table></div>
+  <p class="note">Does the day look the same? No. Only the relative return in that window repeats, by a few basis points across a portfolio. The authors read it as institutions repeating the same schedule on successive days. Use it as a reason to revisit yesterday's one-sided names at the same clock time, and as a reason to stop treating the opening drive as proof of a trend day.</p>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Day 1 breaking news</div><h2>Machines take the headline. Institutions follow the same day and for days after.</h2></div>
+  <div class="clock" id="newsClock" role="group" aria-label="News stage"></div>
+  <div class="panel">
+    <h3 id="nwTitle"></h3>
+    <div class="two" style="margin-top:10px">
+      <div><h3 class="eyebrow">Who is active</h3><p id="nwWho" style="margin-top:4px"></p></div>
+      <div><h3 class="eyebrow">What to do with it</h3><p id="nwDo" style="margin-top:4px"></p></div>
+    </div>
+    <div class="flow"><ul id="nwFacts"></ul></div>
+  </div>
+  <div class="split">
+    <div class="panel"><h3>Where programs live</h3><p style="margin-top:6px">No one publishes odds that a program is active. In a liquid large cap the answer is almost always, from several owners on both sides at once, so the question tells you little. The 79% to 83% survey figures count firms that use VWAP algorithms at all, not a share of flow.</p></div>
+    <div class="panel"><h3>Not in low floats</h3><p style="margin-top:6px">Nothing shows institutional schedule algorithms in sub-$300 million runners. Flow there is retail-heavy, and the VWAP line is a retail and market-maker reference. Your own study treats it as a state: below VWAP, another leg came about 1 time in 20.</p></div>
   </div>
 </section>
 
@@ -266,6 +488,121 @@ footer{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:
 </section>
 
 <section>
+  <div class="head"><div class="eyebrow">Buybacks</div><h2>A capped, patient bid you cannot see</h2>
+  <p class="muted">Corporate buying is large and concentrated, and a safe-harbor rule keeps it passive. Nothing about it is disclosed in real time: purchases are reported as monthly totals, weeks after the quarter ends.</p></div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>When a safe-harbor purchase is allowed <i class="tag doc">DOCUMENTED</i></h3>
+      <div class="strip"><span class="no" style="width:4%"></span><span class="yes" style="width:91%">body of the day</span><span class="no" style="width:5%"></span></div>
+      <div class="ticks"><span>9:30 not the opening print</span><span>15:50 → close: none (liquid names)</span></div>
+      <ul style="margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px">
+        <li><b>Price:</b> never above the highest independent bid or the last independent trade. It cannot lift to a new high or chase a breakout.</li>
+        <li><b>Volume:</b> at most 25% of four-week average daily volume. Heavy repurchasers run at an estimated 3 to 5%.</li>
+        <li><b>One broker per day.</b> Less liquid names stop 30 minutes before the close.</li>
+      </ul>
+      <p class="note">The safe harbor is voluntary and compliance is imperfect, so treat the windows as strong tendencies. Check the rule wording against eCFR before relying on it.</p>
+    </div>
+    <div class="panel">
+      <h3>The quarter: open window and blackout <i class="tag doc">DOCUMENTED</i></h3>
+      <div class="strip"><span class="no" style="width:35%">blackout</span><span class="yes" style="width:35%">open window</span><span class="no" style="width:30%">blackout</span></div>
+      <div class="ticks"><span>quarter-end</span><span>earnings + 3 days</span><span>20 days before quarter-end</span><span>quarter-end</span></div>
+      <p style="margin-top:6px">A schematic of the academic definition. Blackouts are company policy, filed as Exhibit 19 to the 10-K. A half-month blackout cuts buying by almost half the monthly average, but preset 10b5-1 plans keep running, so flow falls and does not stop.</p>
+      <p class="note">Two published tests found no market weakness in blackout periods. "The blackout removes the bid" is unverified.</p>
+    </div>
+    <div class="panel">
+      <h3>Who does the buying, 12 months to Sept 2025 ($ billions) <i class="tag doc">DOCUMENTED</i></h3>
+      <div class="bars" id="barBB"></div>
+      <p class="note">S&amp;P 500 buybacks were $942.5 billion in 2024 and $1.02 trillion in the 12 months to September 2025, roughly $4 billion a day. The top 20 companies were 49.5% of the total. Official figures after Q3 2025 were not retrieved.</p>
+    </div>
+    <div class="panel">
+      <h3>What you can and cannot know</h3>
+      <div class="tbl" style="border:0"><table><tbody>
+        <tr><td><i class="tag doc">KNOWABLE</i></td><td>An authorization exists and how much is left. Whether an accelerated repurchase is running. The earnings date and blackout policy. Last quarter's monthly pace and average price.</td></tr>
+        <tr><td><i class="tag unv">NOT KNOWABLE</i></td><td>Whether the issuer is in the market today, which broker, the price grid, the timing.</td></tr>
+      </tbody></table></div>
+      <p class="note">An announcement is a headline (about +3% historically for open-market programs, less since 2001). It does not mean buying has started: about a quarter of programs saw no buying in the first fiscal year.</p>
+    </div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Tape claim about buybacks</th><th>Rating</th></tr></thead>
+    <tbody>
+      <tr><td>Does not chase, never lifts to a new high</td><td><i class="tag doc">DOCUMENTED</i> rule text</td></tr>
+      <tr><td>Absent from the opening print, the last 10 minutes and the closing auction</td><td><i class="tag doc">DOCUMENTED</i> rule text</td></tr>
+      <tr><td>Spread through the day like a VWAP order, heavier on weak days</td><td><i class="tag prac">PRACTICE</i> broker guides. Firms do buy about 2% below average price at monthly frequency.</td></tr>
+      <tr><td>Supports price and dampens volatility in down markets</td><td><i class="tag doc">DOCUMENTED</i> at monthly horizon only</td></tr>
+      <tr><td>A steady visible bid, support at round numbers or at VWAP</td><td><i class="tag unv">UNVERIFIED</i> no source found</td></tr>
+    </tbody></table></div>
+  <p class="note">IBM 7/16, your clearest "buy program" day, cannot be attributed to a buyback from your data. The 2.57 million shares in the last five minutes and the close sit outside the safe-harbor window.</p>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Share unlocks and scheduled supply</div><h2>Volume steps up for good. Price moves a little, and does not bounce.</h2></div>
+  <div class="three">
+    <div class="panel"><span class="big">−1.5%</span><p>three-day abnormal return at lock-up expiry, larger for venture-backed names. No rebound in the following weeks. <i class="tag doc">DOCUMENTED</i></p></div>
+    <div class="panel"><span class="big">+40%</span><p>permanent rise in volume after the date. <i class="tag doc">DOCUMENTED</i></p></div>
+    <div class="panel"><span class="big">70%+</span><p>borrow fee on Peloton into its expiry. Shorts in venture-backed names did not earn later returns. <i class="tag doc">DOCUMENTED</i></p></div>
+  </div>
+  <p class="note">Sample: 1,948 IPOs, 1988 to 1997. A 2003–2022 thesis still finds a negative effect for venture-backed issuers and a positive one for buyout-backed. Sources disagree on whether the drop comes before or on the date.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Recent unlock</th><th>What happened</th><th>Second cause</th></tr></thead>
+    <tbody>
+      <tr><td><b>Arm</b> 12 Mar 2024</td><td>Rose 2.1% on expiry day</td><td>SoftBank held about 90%</td></tr>
+      <tr><td><b>Rivian</b> 9 May 2022</td><td>Fell about 17 to 22%</td><td>A named seller: Ford sold 8 million shares</td></tr>
+      <tr><td><b>CoreWeave</b> Aug 2025</td><td>Fell 35% in two days. Unlocked six weeks early.</td><td>Weak quarterly results the same week</td></tr>
+      <tr><td><b>Figma</b> 4 Sep 2025</td><td>Down as much as 16%</td><td>First earnings and weak guidance</td></tr>
+    </tbody></table></div>
+  <p class="note">Every violent drop had a second cause. Early-release clauses now tie many unlocks to the first earnings report, so the calendar-site date is often wrong and the move cannot be cleanly pinned on supply.</p>
+  <div class="trades" id="supply"></div>
+  <div class="panel">
+    <h3>Finding the real date</h3>
+    <ul style="margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+      <li>Start from a lock-up calendar, then read the prospectus for earnings, price and blackout triggers and tranche sizes.</li>
+      <li>Recompute once the first earnings date is set.</li>
+      <li>Watch Form 144 on EDGAR the morning of and after. It is filed the same day for affiliate sales.</li>
+      <li>On low floats, check for an effective shelf or a live at-the-market agreement (Exhibit 1.1 to an 8-K) before any long.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Indicators to build</div><h2>Ten gauges, each tied to something measured</h2>
+  <p class="muted">None of these detects a program. Each one measures a state that the research or your own records give a meaning to. The first four cover most of the value.</p></div>
+  <div class="trades">
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">1. Pace gauge</span><i class="tag own">OWN DATA</i></div><p><b>Computes:</b> today's cumulative volume ÷ the 20-day average at the same time.</p><p><b>Reads:</b> under 1.2 not in play, 1.2 to 2 normal, 2+ news-day volume, falling after a hot open means urgent flow is finishing.</p><p class="shows">Your turns split on exactly these lines. Draft script is above.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">2. Flush meter</span><i class="tag own">OWN DATA</i></div><p><b>Computes:</b> distance from VWAP in ATR, minutes the run has lasted, and run volume as a multiple of normal.</p><p><b>Reads:</b> green at 1 to 1.5 ATR with 2 to 4× volume. Amber beyond 1.5 ATR or over 4×.</p><p class="shows">Bigger and louder won less in your sample (75% against 39%, 66% against 41%).</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">3. Seller-still-working flag</span><i class="tag own">OWN DATA</i></div><p><b>Computes:</b> how many bars of the run touched or closed back to the 2-minute 9 EMA, and whether pops are being sold.</p><p><b>Reads:</b> a run riding the 9 EMA is a grind. No turn yet.</p><p class="shows">+0.24R for clean runs against −0.29R when riding. Split orders persist for hours.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">4. Room-to-VWAP label</span><i class="tag own">OWN DATA</i></div><p><b>Computes:</b> (VWAP − entry) ÷ (entry − stop), live on the chart.</p><p><b>Reads:</b> under 2R is C size or a log entry.</p><p class="shows">INTC 10/30 and AMD 11/11 were both under 1R to VWAP.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">5. Bounce clock</span><i class="tag doc">DOCUMENTED</i></div><p><b>Computes:</b> minutes since the low and the share of the flush retraced, with marks at 10, 30 and 60 minutes.</p><p><b>Reads:</b> the measured bounce was mostly done by 30 to 60 minutes. Past 60 with no progress, stop waiting.</p><p class="shows">It also logs the bounce table the research is missing.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">6. One-sided day counter</span><i class="tag own">OWN DATA</i></div><p><b>Computes:</b> share of bars closed on one side of VWAP since the reclaim, distance above VWAP, and position in the day's range.</p><p><b>Reads:</b> distance and range position at 1:00 PM predicted a close at the high (0.72 and 0.73). The pullback-and-hold did not (0.51).</p><p class="shows">It confirms buying already happened. It does not say VWAP will hold.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">7. Event-anchored VWAPs</span><i class="tag inf">INFERENCE</i></div><p><b>Computes:</b> VWAP anchored at the flush low, the reclaim, and the news time, next to the session line.</p><p><b>Reads:</b> shows where flow that started at that event is averaged. Desks are graded on interval VWAP, not the session line.</p><p class="shows">A reference, not a level anyone is shown to defend.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">8. Give-back tracker</span><i class="tag doc">DOCUMENTED</i></div><p><b>Computes:</b> after a one-way run, the share of the push retraced and the volume traded since the run stopped.</p><p><b>Reads:</b> the average is about 10% back quickly and about a third by the close. A fade well past that says the flow was not informed.</p><p class="shows">Use it as an exit cue on trend-day cores.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">9. Low-float state light</span><i class="tag own">OWN DATA</i></div><p><b>Computes:</b> standard deviations above VWAP and percent of the last leg retraced.</p><p><b>Reads:</b> over 1 SD above with under 37% retraced: new high in 30 minutes about 60% of the time. Below VWAP: 7 to 8%.</p><p class="shows">Use it to hold or size up a winner. Every mechanical entry on it lost.</p></article>
+    <article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">10. Calendar and clock flags</span><i class="tag doc">DOCUMENTED</i></div><p><b>Computes:</b> chart labels for buyback open window or blackout, lock-up date, a line at 15:50, and shading on the half-hour windows that were one-sided yesterday.</p><p><b>Reads:</b> context only. After 15:50 issuer buying is gone and auction moves revert overnight.</p><p class="shows">Cheap to build and stops you assigning flow to the wrong cause.</p></article>
+  </div>
+  <p class="note">Skipped on purpose: a "program detector", delta divergence as accumulation, TICK thresholds and VWAP bands. None has evidence behind it. An absorption counter (volume at a bid that holds) is worth logging as a test, since the held bid has no published hit rate.</p>
+</section>
+
+<section>
+  <div class="head"><div class="eyebrow">Actionable</div><h2>The playbook: if this, then that</h2>
+  <p class="muted">Every rule carries its evidence rating. Your own data come from a simulated account with small samples, so treat those rules as worth testing further.</p></div>
+  <div class="chips" id="pbChips" role="group" aria-label="Playbook"></div>
+  <div class="tbl"><table><thead><tr><th>If</th><th>Then</th><th>Rating</th></tr></thead><tbody id="pbBody"></tbody></table></div>
+  <div class="panel">
+    <h3>Log and test in your own data</h3>
+    <ul style="margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+      <li><b>Bounce size.</b> Rebound as a percent of the flush at 10, 30 and 60 minutes after the low, tagged news or no news. The only published table is from 2000–2002.</li>
+      <li><b>Pace at entry</b> for every turn, using the new gauge, to confirm your 1.2 and 2 thresholds on one definition.</li>
+      <li><b>Same window, next day</b> for names with a one-sided VWAP day.</li>
+      <li><b>Flush volume and ATR distance</b> splits out to about 150 turns.</li>
+      <li><b>Filter test:</b> 100-share against 40 or 10 in $250-plus names.</li>
+      <li><b>Held-bid trades:</b> price tier and whether the bid dropped within five minutes.</li>
+      <li><b>Day 1 gap direction</b> against open-to-close return, by news type and pace.</li>
+      <li><b>Buyback names:</b> afternoon dip behaviour in the open window against blackout.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
   <div class="head"><div class="eyebrow">Every window</div><h2>Three size rules your data supports</h2></div>
   <div class="rules">
     <div class="panel"><h3>Tier in after proof, and keep a second bullet</h3><p style="margin-top:6px">Start small on the 2-minute close and scale to grade once the turn confirms. Stopped but not invalidated means re-enter.</p></div>
@@ -283,7 +620,7 @@ footer{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:
 </section>
 
 <footer>
-  <span>Built from the research report "TWAP and VWAP programs on the tape" (23 Nov 2026) and your Notion studies. Your figures come from a simulated forward-test account and one-minute bar replays.</span>
+  <span>Built from two research reports, "TWAP and VWAP programs on the tape" and "Buybacks unlocks news and program timing" (23 Nov 2026), and your Notion studies. Charts marked schematic or illustration are drawn from documented parameters and are not market data. Your figures come from a simulated forward-test account and one-minute bar replays.</span>
   <span>Several sources could only be read through search excerpts: broker algorithm documentation, the parent-order sample, the SMB and Alphatrends pages, and NYSE auction pages. Check Rule 10b-18 wording against eCFR before relying on it.</span>
 </footer>
 </div>
@@ -434,5 +771,172 @@ chips($('algoChips'),Object.entries(ALGOS).map(([k,v])=>[k,v.name]),a0,drawSched
 showWin(store.get('pt-win','turn'));
 chips($('sigChips'),[['all','All'],['doc','Documented'],['prac','Practice'],['unv','Unverified'],['own','Own data']],'all',showSig);showSig('all');
 chips($('tradeChips'),[['all','All'],...Object.entries(ST)],'all',showTr);showTr('all');
+})();
+</script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const T={doc:'DOCUMENTED',prac:'PRACTICE',unv:'UNVERIFIED',own:'OWN DATA',inf:'INFERENCE'};
+const tg=k=>`<i class="tag ${k}">${T[k]}</i>`;
+function chips(host,items,cur,onPick){host.innerHTML='';items.forEach(([k,l])=>{const b=document.createElement('button');b.className='chip';b.type='button';b.id=host.id+'-'+k;b.textContent=l;b.setAttribute('aria-pressed',k===cur);b.onclick=()=>{[...host.children].forEach(c=>c.setAttribute('aria-pressed',c===b));onPick(k)};host.appendChild(b)})}
+function pbars(host,rows,max,cls){$(host).innerHTML=rows.map(([l,v,t,c])=>`<div class="brow"><span class="lbl">${l}</span><div class="track"><i class="fill ${c||cls||''}" style="left:0;width:${Math.max(1,v/max*100)}%"></i></div><span class="num">${t}</span></div>`).join('')}
+
+/* jump nav from section headings */
+const names=['The average program','Schedules','On your tape','Pace gauge','Interval VWAP','Impact and duration','The waterfall','Half-hour effect','Day 1 news','Session clock','Tape tells','Your numbers','Your trades','Buybacks','Unlocks','Indicators','Playbook','Size rules'];
+document.querySelectorAll('.wrap > section').forEach((s,i)=>{s.id='s'+(i+1);const a=document.createElement('a');a.href='#s'+(i+1);a.textContent=names[i]||('Section '+(i+1));
+  a.onclick=e=>{e.preventDefault();s.scrollIntoView({behavior:'smooth',block:'start'})};$('jump').appendChild(a)});
+
+/* filter + simple bars */
+pbars('barFilter',[['Under $1 to low single digits',30,'~30%'],['$20 to $250',60,'50–66%'],['$250.01 to $1,000',83.4,'83%+'],['Above $1,000',85,'83%+']],100);
+pbars('barPush',[['One scheduled VWAP order',6,'0.05–0.07'],['Your 1 ATR flush',100,'1.0 +']],100);
+pbars('barReb',[['NYSE: average drop',7.2,'−7.2%','neg'],['bounce by 10 min',.84,'+0.84%','pos'],['bounce by 30 min',1.13,'+1.13%','pos'],['bounce by 60 min',1.13,'+1.13%','pos'],['Nasdaq: average drop',11,'−11.0%','neg'],['bounce by 10 min',1.06,'+1.06%','pos'],['bounce by 30 min',1.83,'+1.83%','pos'],['bounce by 60 min',2.15,'+2.15%','pos']],11);
+pbars('barLoud',[['Flush volume 2–4× normal (n=29)',66,'66%','pos'],['Flush volume over 4× (n=27)',41,'41%','neg'],['Move of 1–1.5 ATR (n=20)',75,'75%','pos'],['Move beyond 1.5 ATR (n=23)',39,'39%','neg']],100);
+pbars('barBB',[['Apple',96.7,'$96.7'],['Alphabet',55.8,'$55.8'],['NVIDIA',51.8,'$51.8'],['Meta',44.2,'$44.2'],['JPMorgan',27.6,'$27.6']],100);
+
+/* shared day axis */
+const N=78,L=44,R=676,W=(R-L)/N,u=i=>1+3.2*Math.exp(-i/5)+2.6*Math.exp(-(N-1-i)/4);
+const axis=B=>[['9:30',0],['10:30',12],['11:30',24],['12:30',36],['13:30',48],['14:30',60],['15:30',72],['16:00',78]].map(([t,i])=>`<line class="axis" x1="${L+i*W}" y1="${B}" x2="${L+i*W}" y2="${B+5}"/><text x="${L+i*W}" y="${B+19}" text-anchor="middle">${t}</text>`).join('')+`<line class="axis" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>`;
+
+/* pace gauge */
+const PACE={
+ light:{n:'Light day',m:i=>.8+.08*Math.sin(i/9),doc:'Reading under 1.2. The stock is not trading more than normal. Your turns here won 35% at −0.38R.',inf:'A fixed-size VWAP or TWAP order is a bigger share of each bar than planned, finds fewer passive fills and is more likely to cross the spread to keep schedule. Expect grinds. It does not say an order exists, its side, or that the close will be heavier. "Light midday means a catch-up close" has no study behind it.'},
+ inplay:{n:'In play',m:i=>1.5+.2*Math.sin(i/7),doc:'Reading 1.2 to 2. Elevated participation. Your turns here won 58%.',inf:'Schedules built on the historical curve are roughly on plan. The reading says nothing about direction.'},
+ news:{n:'News day',m:i=>1.6+2.2*Math.exp(-i/9),doc:'Reading 2 or more. After earnings the next session runs well over double normal and stays elevated about a week. Your turns here averaged +0.37R.',inf:'Percent-of-volume orders finish early and stop. A static-curve VWAP under-trades the front-loaded morning. It does not say the extra volume is institutional, or that the buyer or seller is done.'},
+ fade:{n:'Hot open, fading',m:i=>.6+2.4*Math.exp(-i/8),doc:'Pace falls through the day after a high open. The opening burst is fading.',inf:'Urgent flow is finishing and whatever continues is slower. Favour mean reversion over continuation. It does not say the move is over.'}
+};
+function drawPace(k){const p=PACE[k],T0=14,B=206,max=4,y=v=>B-Math.min(v,max)/max*(B-T0);let ce=0,ct=0,pts=[];
+  for(let i=0;i<N;i++){ce+=u(i);ct+=u(i)*p.m(i);pts.push(`${(L+(i+1)*W).toFixed(1)},${y(ct/ce).toFixed(1)}`)}
+  let h=`<rect class="zone-lo" x="${L}" y="${y(1.2)}" width="${R-L}" height="${B-y(1.2)}"/><rect class="zone-hi" x="${L}" y="${T0}" width="${R-L}" height="${y(2)-T0}"/><rect class="zone-n" x="${L}" y="${T0}" width="${6*W}" height="${B-T0}"/>`;
+  [[1.2,'1.2'],[2,'2.0'],[1,'1.0'],[3,'3.0']].forEach(([v,t])=>{h+=`<line class="axis" x1="${L}" y1="${y(v)}" x2="${R}" y2="${y(v)}" stroke-dasharray="${v===1.2||v===2?'0':'2 4'}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${t}</text>`});
+  h+=`<polyline class="l1" points="${pts.join(' ')}"/>`+axis(B)+`<text x="${L+4}" y="${T0+12}">noisy before 10:00</text><text class="strong" x="${R}" y="${y(2)-6}" text-anchor="end">2 or more: news-day volume</text><text class="strong" x="${R}" y="${B-8}" text-anchor="end">under 1.2: not in play</text><text x="${L}" y="244">pace = today's cumulative volume ÷ normal cumulative volume at the same time (schematic)</text>`;
+  $('pace').innerHTML=h;$('paceDoc').textContent=p.doc;$('paceInf').textContent=p.inf}
+chips($('paceChips'),Object.entries(PACE).map(([k,v])=>[k,v.n]),'inplay',drawPace);drawPace('inplay');
+$('tsCopy').onclick=()=>{const t=$('tsCode').textContent,b=$('tsCopy');const done=()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy script',1500)};
+  const sel=()=>{const r=document.createRange();r.selectNodeContents($('tsCode'));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Selected. Press copy.'};
+  try{navigator.clipboard.writeText(t).then(done,sel)}catch(e){sel()}};
+
+/* interval VWAP */
+const px=i=>i<=12?100-3.5*(i/12):96.5+3*((i-12)/65)+.25*Math.sin(i*.9), vol=i=>u(i)*(i<=12?1.8:1);
+const tm=i=>{const m=570+i*5;return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')};
+function drawIV(){const s=+$('ivStart').value,T0=14,B=206,lo=96,hi=100.4,y=v=>B-(v-lo)/(hi-lo)*(B-T0),x=i=>L+(i+.5)*W;
+  let pv=0,v=0,apv=0,av=0,P=[],S=[],A=[],sv=0,aw=0;
+  for(let i=0;i<N;i++){pv+=px(i)*vol(i);v+=vol(i);sv=pv/v;P.push(`${x(i).toFixed(1)},${y(px(i)).toFixed(1)}`);S.push(`${x(i).toFixed(1)},${y(sv).toFixed(1)}`);
+    if(i>=s){apv+=px(i)*vol(i);av+=vol(i);aw=apv/av;A.push(`${x(i).toFixed(1)},${y(aw).toFixed(1)}`)}}
+  let h='';[97,98,99,100].forEach(p=>h+=`<line class="axis" x1="${L}" y1="${y(p)}" x2="${R}" y2="${y(p)}" stroke-dasharray="2 4"/><text x="${L-6}" y="${y(p)+4}" text-anchor="end">${p}</text>`);
+  h+=`<line class="axis" x1="${x(s)}" y1="${T0}" x2="${x(s)}" y2="${B}"/><text class="strong" x="${x(s)+5}" y="${T0+10}">order starts ${tm(s)}</text>`;
+  h+=`<polyline class="l3" points="${P.join(' ')}"/><polyline class="l1" points="${S.join(' ')}"/><polyline class="l2" points="${A.join(' ')}"/>`+axis(B);
+  h+=`<text x="${L}" y="244">black: price · blue: session VWAP · dashed purple: this order's interval VWAP (schematic)</text>`;
+  $('iv').innerHTML=h;$('ivLabel').textContent='Order start time: '+tm(s);
+  $('ivNote').textContent=`At the close the session VWAP is ${sv.toFixed(2)} and this order's own VWAP is ${aw.toFixed(2)}, a gap of ${Math.abs(sv-aw).toFixed(2)}. A desk that started at ${tm(s)} is judged against the dashed line, so the session VWAP on your chart is at best an approximation of the level anyone is measured against.`}
+$('ivStart').oninput=drawIV;drawIV();
+
+/* impact */
+(function(){const T0=20,B=200,y=v=>B-v*(B-T0),xe=260,zs=[[0,1],[.1,.91],[.25,.85],[.5,.79],[1,.72],[2,.64],[5,.54],[10,.47]];
+  let up=[];for(let i=0;i<=40;i++){const f=i/40;up.push(`${(L+f*(xe-L)).toFixed(1)},${y(Math.sqrt(f)).toFixed(1)}`)}
+  const zx=j=>xe+j*((R-xe)/(zs.length-1));let dn=zs.map((z,j)=>`${zx(j).toFixed(1)},${y(z[1]).toFixed(1)}`);
+  let h=`<line class="axis" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/><line class="axis" x1="${xe}" y1="${T0-8}" x2="${xe}" y2="${B}" stroke-dasharray="3 3"/>`;
+  [[1,'peak'],[.66,'0.66 at the close'],[.33,'~0.33 at ~50 days']].forEach(([v,t])=>h+=`<line class="axis" x1="${L}" y1="${y(v)}" x2="${R}" y2="${y(v)}" stroke-dasharray="2 4"/><text class="strong" x="${L+4}" y="${y(v)-5}">${t}</text>`);
+  h+=`<polyline class="l1" points="${up.join(' ')}"/><polyline class="l2" points="${dn.join(' ')}"/>`;
+  zs.forEach((z,j)=>{h+=`<circle class="dot" cx="${zx(j)}" cy="${y(z[1])}" r="3.5"/>`;if(j)h+=`<text class="strong" x="${zx(j)}" y="${y(z[1])-9}" text-anchor="middle">${z[1].toFixed(2)}</text><text x="${zx(j)}" y="${B+17}" text-anchor="middle">${z[0]}×</text>`});
+  h+=`<text x="${(L+xe)/2}" y="${B+17}" text-anchor="middle">order working</text><text class="strong" x="${xe+6}" y="${T0-2}">order ends</text><text x="${L}" y="244">after the end: volume traded since, as a multiple of the volume traded while the order ran</text>`;
+  $('impact').innerHTML=h})();
+
+/* half-hour */
+(function(){const T0=24,B=176,v=[11,1.75,1.75,1.75,1.75,1.75,1.75,1.75,1.75,1.75,1.75,1.75,8],bw=(R-L)/13,y=x=>B-x/12*(B-T0);
+  let h=`<line class="axis" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>`;
+  v.forEach((x,i)=>{const X=L+i*bw+5,m=570+i*30;h+=`<rect class="${i===0||i===12?'bar':'barM'}" x="${X}" y="${y(x)}" width="${bw-10}" height="${B-y(x)}"/><text class="strong" x="${X+(bw-10)/2}" y="${y(x)-6}" text-anchor="middle">${i===0?'11+':i===12?'8+':i===6?'avg 1.75':''}</text><text x="${X+(bw-10)/2}" y="${B+16}" text-anchor="middle">${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}</text>`});
+  h+=`<text x="${L}" y="218">half-hour starting at · winners minus losers in the same half-hour the next day, basis points</text>`;$('hh').innerHTML=h})();
+
+/* news stages */
+const NW=[
+ ['ms','0–5 seconds','Machines','Milliseconds to 5 seconds','Low-latency subscribers to machine-readable news feeds, and market makers repricing quotes.','Do not race a headline. The first seconds belong to machines, and they tend to overshoot before slower traders correct.',[['doc','Index products respond to macro surprises within 5 milliseconds. Profits to speed are small, about $19,000 per event in SPY.'],['doc','For company newswire items, more of the two-minute reaction lands in the first 5 seconds when the item is highly relevant.'],['prac','Bloomberg, LSEG and Dow Jones sell these feeds for automated trading. No source names which firms use which.']]],
+ ['on','Overnight','Quotes move','Overnight and pre-market','Liquidity providers moving quotes on very few trades.','Assume most of the repricing on earnings is done by 9:30. Trade the Day 1 structure, not the surprise.',[['doc','99.1% of earnings are announced outside regular hours. Surprises reach prices mostly through quote changes, on a median of 16 after-hours trades.'],['doc','Identified news explains 49.6% of overnight stock-specific volatility against 12.4% in trading hours.']]],
+ ['open','9:30–10:00','Residual discovery','The open to about 10:00','The opening auction absorbs the overnight imbalance. Price discovery finishes.','Wait for structure. Your entries before 9:45 lost in all three months reviewed.',[['doc','Price discovery after earnings is generally complete by 10:00 (thesis-level source).'],['unv','"The open carries 30 to 40% of the day\'s volume on a surprise" comes from one weak source.'],['unv','The one backtested pattern is a 5-minute opening-range breakout on high-relative-volume names (Sharpe 2.81, 2016–2023). It is not peer-reviewed. Size it as a test.']]],
+ ['d1','Rest of Day 1','Institutions join','The rest of Day 1','Institutions trading on the tone of the news, with elevated volume all day.','You have no directional bias from the gap alone. Require price and pace confirmation. Do not fade because "institutions fade gaps": in aggregate they trade with the news.',[['doc','Institutions chiefly trade on news tone directly after the first release, and do not anticipate unscheduled news.'],['doc','The average regular-hours return after earnings is mostly flat. Any Day 1 trend is variance around zero.'],['prac','Desks switching from historical-curve VWAP to participation or arrival-price logic on event days is reasoning, with no study retrieved.']]],
+ ['d2','Days 2–5','Follow-through','Days 2 to 5','Institutional follow-through and analyst revisions.','Keep the name on the list. Your Day 2 flush-turn variant stays at C size until the sample grows.',[['doc','The largest share of institutional earnings-related trading comes after the announcement. Volume stays elevated for about a week.'],['own','Your Day 2 flush-turn variant: 96 trades, profit factor 1.44 to 1.54. Your Day 2 lane has nine cases, too few to size on.'],['prac','SMB\'s changing-fundamentals and second-day plays are taught practice with no published test.']]],
+ ['d60','Days 5–60','Long tail','Days 5 to 60','Multi-day parent orders finishing, and slower holders.','Expect a more complete Day 1 move and less drift in widely watched large caps. Follow-through is more plausible in less-followed names.',[['doc','Drift concentrates where institutional attention was low.'],['unv','Whether post-earnings drift still exists is disputed. One paper says it has been gone in large stocks since 2006. Later papers say it is alive.']]]
+];
+function showNews(k){const n=NW.find(x=>x[0]===k);[...$('newsClock').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===k));
+  $('nwTitle').textContent=n[3];$('nwWho').textContent=n[4];$('nwDo').textContent=n[5];$('nwFacts').innerHTML=n[6].map(([t,x])=>`<li>${tg(t)}<span>${x}</span></li>`).join('')}
+NW.forEach(n=>{const b=document.createElement('button');b.type='button';b.id='nw-'+n[0];b.dataset.k=n[0];b.innerHTML=`${n[1]}<small>${n[2]}</small>`;b.onclick=()=>showNews(n[0]);$('newsClock').appendChild(b)});showNews('d1');
+
+/* supply cards */
+$('supply').innerHTML=[
+ ['Rule 144 affiliate sales','doc','Capped per three months at the greater of 1% of shares outstanding or four-week average weekly volume. Form 144 is on EDGAR the same day. The cap rarely binds in a hot IPO.'],
+ ['Insider 10b5-1 plans','doc','Officers wait the later of 90 days or two business days after the next quarterly report before selling. Plan adoptions are disclosed quarterly, so programmatic selling is announced ahead. Sell-to-cover on vest dates is price-insensitive.'],
+ ['Venture distributions','doc','One holder becomes hundreds of uncoordinated sellers. Returns stay negative for months after, which fits a slow drift more than a one-day event.'],
+ ['Blocks and secondaries','doc','The largest holders sell through bank blocks. 75% of offerings are now priced overnight. Old averages: 2 to 3% discount. Reported 2025 deals: 3.4 to 10%. The bounce evidence belongs to the older marketed format.'],
+ ['At-the-market programs','prac','Shares dribbled into the market with no announcement on selling days. The issuer sets a daily share cap and a price floor, so supply tends to switch on into strength.'],
+ ['Convertibles','doc','Announcement drops averaged about −4.6% in 2000–2008. Much of it is mechanical hedge shorting, and related financings showed partial recovery within a month.'],
+ ['Low-float offerings','prac','Case evidence only, all one way: discounts of 25% to 80% and drops of 30 to 79% on pricing. The deal price becomes the reference. No bounce statistics exist.'],
+ ['How unlocked holders execute','unv','No source says whether they use VWAP or TWAP algorithms, or over how many days. Passive index buying from the float increase arrives weeks later at a rebalance close.']
+].map(r=>`<article class="trade"><div class="top"><span class="tk" style="font-family:var(--display)">${r[0]}</span>${tg(r[1])}</div><p>${r[2]}</p></article>`).join('');
+
+/* playbook */
+const PB={
+ prep:['Pre-market',[
+  ['Stock price tier','Under about $50 keep the 100-share filter. $250 to $1,000 lower it to 40. Above $1,000 lower it to 10.','doc inf'],
+  ['Pace gauge loaded','Confirm 20 clean sessions and extended hours off. Ignore readings before 10:00.','inf'],
+  ['News type','Tag each name: scheduled earnings, unscheduled headline, analyst action, offering, none.','doc'],
+  ['Buyback name','Note whether it is plausibly in its open window: a few days after earnings until about 20 days before quarter-end.','doc'],
+  ['IPO under a year old','Check the lock-up date, then the prospectus for early-release triggers and whether earnings fall the same week.','prac'],
+  ['Low float','Before any long, check for an effective shelf, a live at-the-market agreement or a recent priced deal.','inf'],
+  ['Yesterday\'s one-sided names','List them with the half-hour windows in which they were bid or offered. A reason to look, not to size.','doc']]],
+ news:['Day 1 news',[
+  ['A headline breaks intraday','Do not race it. Machines own the first seconds and tend to overshoot.','doc'],
+  ['Earnings came after hours','Assume most repricing is done by 9:30 and discovery by 10:00. Trade the structure.','doc'],
+  ['You want a bias from the gap alone','You have none. The average regular-hours return after earnings is flat. Require price and pace confirmation.','doc'],
+  ['Pace is 2+ and the opening range breaks','The one backtested continuation pattern. Size it as a test.','unv'],
+  ['You are tempted to fade because institutions fade gaps','Don\'t. In aggregate they trade with the news.','doc'],
+  ['Day 2 to Day 5','Keep the name on the list. Day 2 flush-turn stays at C size until the sample grows.','doc own']]],
+ turn:['Turns',[
+  ['1 ATR or more from VWAP in under 30 minutes','Treat it as urgent selling plus thin liquidity, not a schedule. Ask whether there is news.','inf'],
+  ['Fundamental news is behind the flush','Lower the grade. Informed flow retraces least.','doc'],
+  ['No news, and pace is 1.2 or more','Your winning condition: counter-trend turns won 59% at +0.49R (n=38).','own'],
+  ['Pace is below 1.2','C size or log only. Those turns won 35% at −0.38R.','own'],
+  ['The seller is still printing: riding the 9 EMA, pops sold','No entry. The fade starts when the flow ends, not before.','doc own'],
+  ['Flush volume over 4× or the move beyond 1.5 ATR','Do not upgrade for size or loudness. Your sweet spot was 2 to 4× and 1 to 1.5 ATR.','own'],
+  ['The turn confirms','Expect a modest average bounce: 15 to 20% of the drop. Only graded model turns have earned a VWAP target.','doc own'],
+  ['It reaches VWAP inside 30 minutes','Sell all of it there.','own doc'],
+  ['60 minutes after the low with no progress','Stop expecting mean reversion to do the work.','doc'],
+  ['Stopped, but the thesis stands','Re-enter on a new 2-minute turn. 20 of your 33 best turns stopped you first.','own'],
+  ['VIX is elevated and many stocks are flushing','Bigger potential bounce, less reliable support. Smaller first clip, keep the re-entry.','doc']]],
+ trend:['Trend days',[
+  ['The opening half-hour is strongly one-way','Do not infer a trend day. The next half-hour tends to reverse slightly.','doc'],
+  ['One-sided flow persists past 10:30 with pace above 1.2','Stay with it. Persistence is usually several same-side orders overlapping.','doc'],
+  ['Volume share fades and the bid weakens after a long run','Exit cue. Expect about a third of the push back by the close, about 10% in the first minutes.','doc'],
+  ['Price holds above a rising session VWAP','A consequence of persistent buying. The session VWAP is not any desk\'s benchmark.','doc unv'],
+  ['A name was one-sided yesterday','Check the same clock windows today, small, as a logged test.','doc'],
+  ['A round clock time arrives','Expect a volume blip. Do not expect a turn because of the clock.','doc']]],
+ lf:['Low floats',[
+  ['You are reading a "program" in a sub-$300M runner','Drop the idea. Nothing shows schedule algorithms there.','doc unv'],
+  ['The stock is below VWAP','No adds. Another leg came about 1 time in 20.','own'],
+  ['It spikes and a shelf or at-the-market program exists','Assume supply can appear into strength with no headline. Take profits into spikes.','prac inf'],
+  ['An offering prices overnight','The deal price is the reference. Discounts run 25% to 80%. No bounce statistics exist.','prac'],
+  ['Dollar volume is under $500 million','Not your profitable bucket.','own']]],
+ bb:['Buyback names',[
+  ['A heavy repurchaser is in its open window','Assume a patient, price-capped buyer may be a low-single-digit share of volume in the body of the day, heavier on weak days. Do not assign it to a level.','prac inf'],
+  ['The stock is breaking to new highs, gapping at the open, or ramping after 15:50','That is not safe-harbor issuer flow.','doc'],
+  ['The stock is in blackout','Do not short it for that reason. Flow falls but does not stop.','doc'],
+  ['A buyback is announced','Trade the headline as a headline. It does not mean buying has begun.','doc'],
+  ['Someone says the buyback is on the bid','It cannot be known. Buying is disclosed monthly, weeks after quarter-end.','doc'],
+  ['An accelerated repurchase is running','The bank\'s hedge is a multi-week buyer against average daily VWAP. Background only.','prac']]],
+ ul:['Unlocks and supply',[
+  ['A lock-up date is coming','Verify it in the prospectus. Early-release clauses often move it to just after earnings.','prac'],
+  ['You want to short into the date','The average edge is about −1.5% over three days, borrow is at its most expensive, and shorts did not earn later returns.','doc'],
+  ['You want to buy the bounce after','No rebound is documented. Volume steps up permanently.','doc'],
+  ['The issuer is buyout-backed','Do not assume a direction. The measured average was positive.','doc'],
+  ['A named holder signals a sale, or earnings fall the same week','That is where the violent moves came from. Size for range.','prac'],
+  ['A Form 144 appears that morning','Treat it as confirmed affiliate supply over the following days.','doc inf'],
+  ['A convertible is announced','Much of the day-of drop is hedge shorting.','doc']]],
+ pace:['Pace readings',[
+  ['Below 1.2 by 10:15','Not in play. Turns at C or log. Expect grinds.','own inf'],
+  ['1.2 to 2','Normal in-play. Standard grading.','own'],
+  ['2 or more','News-day volume. Turns paid best here, but a piece held past VWAP helped only 13% of the time. Sell at VWAP.','own'],
+  ['Falling pace after a high open','Urgent flow is finishing. Favour mean reversion over continuation.','inf'],
+  ['Low all day and you expect a heavy close','No evidence. Do not position for it.','unv']]]
+};
+function showPB(k){$('pbBody').innerHTML=PB[k][1].map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2].split(' ').map(tg).join(' ')}</td></tr>`).join('')}
+chips($('pbChips'),Object.entries(PB).map(([k,v])=>[k,v[0]]),'turn',showPB);showPB('turn');
 })();
 </script>
